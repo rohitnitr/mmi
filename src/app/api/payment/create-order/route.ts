@@ -1,27 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Razorpay from 'razorpay'
-
-const razorpay = new Razorpay({
-  key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-})
 
 export async function POST(req: NextRequest) {
   try {
     const { amount } = await req.json()
+    const amountInPaise = (amount || 99) * 100
 
-    // Amount is in rupees, convert to paise
-    const amountInPaise = (amount || 100) * 100
+    // Lazy-import Razorpay to avoid module-load validation error
+    const Razorpay = (await import('razorpay')).default
+    const razorpay = new Razorpay({
+      key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+      key_secret: process.env.RAZORPAY_KEY_SECRET!,
+    })
 
     const order = await razorpay.orders.create({
       amount: amountInPaise,
       currency: 'INR',
-      receipt: `receipt_${Date.now()}`,
+      receipt: `mmi_${Date.now()}`,
     })
 
     return NextResponse.json({ order })
   } catch (err) {
-    console.error('Razorpay order creation error:', err)
+    console.error('Razorpay order error:', err)
     return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
   }
 }
