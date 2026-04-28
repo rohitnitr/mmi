@@ -14,7 +14,7 @@ import InviteModal from '@/components/InviteModal'
 const VoiceRoom = lazyLoad(() => import('@/components/VoiceRoom'), { ssr: false })
 
 interface UserProfile {
-  id: string; username: string; experience: string; domain: string
+  id: string; username: string; email?: string; experience: string; domain: string
   target_role: string; coffee_balance: number; last_active?: string; created_at: string
 }
 interface Invite {
@@ -242,14 +242,14 @@ export default function HomePage() {
       {showAuth && <OnboardingModal onClose={() => setShowAuth(false)} />}
 
       {needsSetup && authUser && (
-        <ProfileSetupModal userId={authUser.id} onComplete={async () => {
+        <ProfileSetupModal userId={authUser.id} email={authUser.email} onComplete={async () => {
           setNeedsSetup(false)
           if (authUser) {
             const p = await fetchProfile(authUser.id)
             if (p) { await fetchInvites(authUser.id); await fetchSession(authUser.id) }
           }
           await fetchUsers()
-          showToast('Profile created! You have 1 free coffee ☕')
+          showToast('Welcome! You have 1 free coffee ☕')
         }} />
       )}
 
@@ -280,7 +280,7 @@ export default function HomePage() {
             {profile ? (
               <>
                 <button className="coffee-badge" onClick={() => setShowPayment(true)}>☕ {profile.coffee_balance}</button>
-                <button className="avatar header-avatar" onClick={() => setShowProfile(true)} title="Your profile">
+                <button className="header-avatar" onClick={() => setActiveTab('profile')} title="Your profile">
                   {profile.username.slice(0, 2).toUpperCase()}
                 </button>
               </>
@@ -295,12 +295,11 @@ export default function HomePage() {
       {authUser && profile && (
         <div className="tab-nav">
           <div className="container tab-nav-inner">
-            <button className={`tab-btn${activeTab === 'peers' ? ' active' : ''}`} onClick={() => setActiveTab('peers')}>
-              🔍 Find Peers
-            </button>
+            <button className={`tab-btn${activeTab === 'peers' ? ' active' : ''}`} onClick={() => setActiveTab('peers')}>🔍 Find Peers</button>
             <button className={`tab-btn${activeTab === 'requests' ? ' active' : ''}`} onClick={() => setActiveTab('requests')}>
               🔔 Requests {pendingInviteCount > 0 && <span className="tab-badge">{pendingInviteCount}</span>}
             </button>
+            <button className={`tab-btn${activeTab === 'profile' ? ' active' : ''}`} onClick={() => setActiveTab('profile')}>👤 Profile</button>
           </div>
         </div>
       )}
@@ -428,6 +427,50 @@ export default function HomePage() {
           </section>
         )}
 
+        {/* ─── PROFILE TAB (inline) ─── */}
+        {authUser && profile && activeTab === 'profile' && (
+          <section className="section">
+            <div className="profile-page">
+              <div className="profile-page-card">
+                <div className="profile-page-avatar">{profile.username.slice(0, 2).toUpperCase()}</div>
+                <h2 className="profile-page-name">{profile.username}</h2>
+                <p className="profile-page-email">{authUser.email || profile.email || '—'}</p>
+                <div className="profile-coffee-row">
+                  <span className="profile-coffee-count">☕ {profile.coffee_balance}</span>
+                  <span className="profile-coffee-label">coffees</span>
+                  <button className="profile-topup-btn" onClick={() => setShowPayment(true)}>+ Top up</button>
+                </div>
+              </div>
+              <div className="profile-page-card">
+                <div className="profile-fields">
+                  <div className="profile-field-row">
+                    <span className="pf-label">Target Role</span>
+                    <span className="pf-value">{profile.target_role || '—'}</span>
+                  </div>
+                  <div className="profile-field-row">
+                    <span className="pf-label">Experience</span>
+                    <span className="pf-value">{profile.experience}</span>
+                  </div>
+                  <div className="profile-field-row">
+                    <span className="pf-label">Domain</span>
+                    <span className="pf-value">{profile.domain}</span>
+                  </div>
+                  <div className="profile-field-row">
+                    <span className="pf-label">Member since</span>
+                    <span className="pf-value">{new Date(profile.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="profile-page-card">
+                <div className="profile-actions-stack">
+                  <button className="btn btn-secondary w-full" onClick={() => setShowProfile(true)}>✏️ Edit Profile</button>
+                  <button className="btn btn-danger w-full" onClick={handleLogout}>Sign Out</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ─── HOW IT WORKS (non-auth) ─── */}
         {!authUser && (
           <section className="how-section">
@@ -460,19 +503,21 @@ export default function HomePage() {
             {pendingInviteCount > 0 && <span className="bnb-badge">{pendingInviteCount}</span>}
             <span className="bnb-label">Requests</span>
           </button>
-          <button className="bottom-nav-btn" onClick={() => setShowProfile(true)}>
+          <button className={`bottom-nav-btn${activeTab === 'profile' ? ' active' : ''}`} onClick={() => setActiveTab('profile')}>
             <span className="bnb-icon">👤</span><span className="bnb-label">Profile</span>
           </button>
         </nav>
       )}
 
-      {/* ─── FOOTER ─── */}
-      <footer className="footer">
-        <div className="container footer-inner">
-          <span className="footer-logo">☕ MatchMyInterview</span>
-          <span className="footer-note">Offer a peer a coffee · Practice together</span>
-        </div>
-      </footer>
+      {/* ─── FOOTER (hidden on mobile when logged in, bottom-nav takes its place) ─── */}
+      {!authUser && (
+        <footer className="footer">
+          <div className="container footer-inner">
+            <span className="footer-logo">☕ MatchMyInterview</span>
+            <span className="footer-note">Offer a peer a coffee · Practice together</span>
+          </div>
+        </footer>
+      )}
     </div>
   )
 }

@@ -20,9 +20,9 @@ const DOMAIN_OPTIONS = [
   { label: 'Government Exams', emoji: '🏛️' },{ label: 'Other', emoji: '🌐' },
 ]
 
-interface Props { userId: string; onComplete: () => void }
+interface Props { userId: string; email?: string | null; onComplete: () => void }
 
-export default function ProfileSetupModal({ userId, onComplete }: Props) {
+export default function ProfileSetupModal({ userId, email, onComplete }: Props) {
   const [step, setStep] = useState(1)
   const [targetRole, setTargetRole] = useState('')
   const [suggestions, setSuggestions] = useState<string[]>([])
@@ -41,7 +41,7 @@ export default function ProfileSetupModal({ userId, onComplete }: Props) {
     try {
       const res = await fetch('/api/users', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, experience: experience || 'Fresher', domain: domain || 'Software / IT', target_role: targetRole }),
+        body: JSON.stringify({ userId, email: email || undefined, experience: experience || 'Fresher', domain: domain || 'Software / IT', target_role: targetRole }),
       })
       if (!res.ok) throw new Error('Failed to create profile')
       onComplete()

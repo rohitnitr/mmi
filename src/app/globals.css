@@ -282,3 +282,89 @@ body{font-family:var(--font);background:var(--white);color:var(--gray-900);line-
 
 .hide-mobile{display:none}
 @media(min-width:640px){.hide-mobile{display:inline}}
+
+/* ── LAYOUT FIX ──────────────────────────────────────────────────────── */
+.app{min-height:100vh;display:flex;flex-direction:column}
+.main{flex:1;padding:24px 0 32px}
+.main.has-bottom-nav{padding-bottom:96px}
+
+/* ── METRICS GRID 2 ──────────────────────────────────────────────────── */
+.metrics-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px}
+.metric-card{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #f0f0f0;border-radius:16px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.05),0 4px 12px rgba(0,0,0,.04)}
+.metric-value{font-size:26px;font-weight:800;color:#09090b;line-height:1;display:block}
+.metric-label{font-size:11px;color:#71717a;font-weight:500;letter-spacing:.2px;display:block;margin-top:2px}
+
+/* ── GOOGLE BUTTON ───────────────────────────────────────────────────── */
+.btn-google{background:#fff;color:#3c4043;border:1.5px solid #e8eaed;font-size:15px;font-weight:500;justify-content:center;gap:10px;height:48px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.btn-google:hover{background:#f8f9fa;border-color:#dadce0;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.btn-danger{background:#fff;color:#dc2626;border:1.5px solid #fee2e2;font-size:14px;font-weight:600;border-radius:10px}
+.btn-danger:hover{background:#fee2e2}
+
+/* ── ONBOARDING AUTH MODAL ───────────────────────────────────────────── */
+.ob-box{padding:28px 22px 36px}
+.ob-auth-body{margin-top:20px;display:flex;flex-direction:column;gap:0}
+.ob-note{font-size:12px;color:#71717a;text-align:center;margin-top:14px}
+.otp-hint{font-size:12px;color:#71717a;text-align:center;margin-top:6px}
+
+/* ── PROFILE SETUP MODAL ─────────────────────────────────────────────── */
+.setup-box{padding:24px 22px 36px}
+.setup-progress{height:3px;background:#f4f4f5;border-radius:99px;margin-bottom:6px;overflow:hidden}
+.setup-progress-fill{height:100%;background:#18181b;border-radius:99px;transition:width .3s ease}
+.setup-step-label{font-size:11px;color:#a1a1aa;font-weight:500;text-align:right;margin-bottom:20px}
+.ob-role-wrap{position:relative;margin-bottom:12px}
+
+/* ── HEADER AVATAR ───────────────────────────────────────────────────── */
+.header-avatar{cursor:pointer;border:none;background:#18181b;color:#fff;border-radius:50%;width:36px;height:36px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:box-shadow .2s}
+.header-avatar:hover{box-shadow:0 0 0 3px #e4e4e7}
+
+/* ── TAB NAV (desktop) ───────────────────────────────────────────────── */
+.tab-nav{background:#fff;border-bottom:1px solid #f0f0f0;display:none}
+@media(min-width:640px){.tab-nav{display:block}}
+.tab-nav-inner{display:flex;align-items:center;gap:4px;height:48px}
+.tab-btn{background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;color:#71717a;padding:8px 16px;border-radius:8px;transition:all .15s;display:flex;align-items:center;gap:6px;position:relative}
+.tab-btn:hover{background:#f4f4f5;color:#18181b}
+.tab-btn.active{color:#18181b;background:#f4f4f5;font-weight:600}
+.tab-btn.active::after{content:'';position:absolute;bottom:-13px;left:8px;right:8px;height:2px;background:#18181b;border-radius:2px}
+.tab-badge{background:#18181b;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;min-width:18px;text-align:center}
+
+/* ── BOTTOM NAV (mobile) ─────────────────────────────────────────────── */
+.bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid #f0f0f0;padding:8px 8px 20px;z-index:40;gap:4px}
+@media(min-width:640px){.bottom-nav{display:none}}
+.bottom-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border:none;background:none;cursor:pointer;border-radius:12px;transition:background .15s;position:relative;font-family:'Inter',sans-serif}
+.bottom-nav-btn:hover,.bottom-nav-btn.active{background:#f4f4f5}
+.bnb-icon{font-size:20px;line-height:1}
+.bnb-label{font-size:10px;font-weight:500;color:#71717a;line-height:1}
+.bottom-nav-btn.active .bnb-label{color:#18181b;font-weight:700}
+.bnb-badge{position:absolute;top:4px;right:calc(50% - 20px);background:#dc2626;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:99px;min-width:16px;text-align:center}
+
+/* ── PROFILE PAGE (inline tab) ───────────────────────────────────────── */
+.profile-page{max-width:480px;margin:0 auto}
+.profile-page-card{background:#fff;border:1px solid #f0f0f0;border-radius:20px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:12px}
+.profile-page-avatar{width:72px;height:72px;border-radius:50%;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;margin:0 auto 14px}
+.profile-page-name{font-size:22px;font-weight:800;color:#09090b;text-align:center;margin-bottom:4px}
+.profile-page-email{font-size:13px;color:#71717a;text-align:center;margin-bottom:16px}
+.profile-coffee-row{display:flex;align-items:center;justify-content:center;gap:8px;background:#fef3c7;border-radius:10px;padding:10px 16px;margin-bottom:4px}
+.profile-coffee-count{font-size:20px;font-weight:800;color:#92400e}
+.profile-coffee-label{font-size:13px;color:#92400e;font-weight:500}
+.profile-topup-btn{font-size:12px;color:#92400e;background:#fef3c7;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;padding:4px 10px;border-radius:6px}
+.profile-fields{display:flex;flex-direction:column;gap:0}
+.profile-field-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid #f4f4f5}
+.profile-field-row:last-child{border-bottom:none}
+.pf-label{font-size:12px;font-weight:600;color:#71717a;letter-spacing:.3px;text-transform:uppercase}
+.pf-value{font-size:14px;font-weight:600;color:#18181b;text-align:right;max-width:60%;word-break:break-word}
+.profile-actions-stack{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+
+/* ── PROFILE MODAL ───────────────────────────────────────────────────── */
+.profile-modal-box{padding:24px 20px 32px}
+.profile-header{display:flex;flex-direction:column;align-items:center;margin-bottom:20px}
+.profile-avatar{width:64px;height:64px;border-radius:50%;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;margin-bottom:10px}
+.profile-name{font-size:18px;font-weight:800;color:#09090b;margin-bottom:4px}
+.profile-coffee-badge{font-size:13px;font-weight:600;color:#92400e;background:#fef3c7;padding:4px 12px;border-radius:99px}
+.profile-view-fields,.profile-edit-fields{margin-bottom:16px}
+.profile-field{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #f4f4f5}
+.profile-field:last-child{border-bottom:none}
+.profile-actions{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.profile-edit-actions{display:flex;gap:8px;margin-top:16px}
+.ob-option-card.compact{padding:8px 10px;font-size:13px;font-weight:600;color:#18181b;min-height:0}
+.ob-option-card.compact.selected{color:#fff}
+
