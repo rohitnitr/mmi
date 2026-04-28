@@ -1,5 +1,4 @@
 'use client'
-
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -7,63 +6,36 @@ import type { User } from '@supabase/supabase-js'
 import { formatDistanceToNow } from 'date-fns'
 import lazyLoad from 'next/dynamic'
 import OnboardingModal from '@/components/OnboardingModal'
+import ProfileSetupModal from '@/components/ProfileSetupModal'
+import ProfileModal from '@/components/ProfileModal'
 import PaymentModal from '@/components/PaymentModal'
 import InviteModal from '@/components/InviteModal'
 
 const VoiceRoom = lazyLoad(() => import('@/components/VoiceRoom'), { ssr: false })
 
 interface UserProfile {
-  id: string
-  username: string
-  experience: string
-  domain: string
-  target_role: string
-  coffee_balance: number
-  last_active: string
+  id: string; username: string; experience: string; domain: string
+  target_role: string; coffee_balance: number; last_active?: string; created_at: string
 }
-
 interface Invite {
-  id: string
-  sender_id: string
-  receiver_id: string
-  status: string
-  created_at: string
-  expires_at: string
-  note?: string
-  sender?: UserProfile
+  id: string; sender_id: string; receiver_id: string; status: string
+  created_at: string; expires_at: string; note?: string; sender?: UserProfile
 }
-
 interface Session {
-  id: string
-  user1_id: string
-  user2_id: string
-  channel_name: string
-  status: string
-  other_username?: string
+  id: string; user1_id: string; user2_id: string; channel_name: string
+  status: string; other_username?: string
 }
 
-interface Metrics {
-  online: number
-  sessions: number
-  totalUsers: number
-  totalSessions: number
-}
-
-// ── Match scoring ────────────────────────────────────────────────────────────
 const EXP_RANK: Record<string, number> = { 'Fresher': 0, '0–2 yrs': 1, '2–5 yrs': 2, '5+ yrs': 3 }
-
-function matchScore(me: UserProfile, other: UserProfile): number {
-  let score = 0
-  if (me.domain && other.domain && me.domain === other.domain) score += 50
-  const myExp = EXP_RANK[me.experience] ?? 0
-  const theirExp = EXP_RANK[other.experience] ?? 0
-  if (Math.abs(myExp - theirExp) <= 1) score += 30
+function matchScore(me: UserProfile, other: UserProfile) {
+  let s = 0
+  if (me.domain && other.domain === me.domain) s += 50
+  if (Math.abs((EXP_RANK[me.experience] ?? 0) - (EXP_RANK[other.experience] ?? 0)) <= 1) s += 30
   if (me.target_role && other.target_role) {
-    const myWords = me.target_role.toLowerCase().split(' ')
-    const theirWords = other.target_role.toLowerCase().split(' ')
-    if (myWords.some(w => w.length > 2 && theirWords.includes(w))) score += 20
+    const mw = me.target_role.toLowerCase().split(' ')
+    if (other.target_role.toLowerCase().split(' ').some(w => w.length > 2 && mw.includes(w))) s += 20
   }
-  return score
+  return s
 }
 
 function getSB() {
@@ -72,90 +44,81 @@ function getSB() {
   return createClient()
 }
 
+type Tab = 'peers' | 'requests' | 'profile'
+
 export default function HomePage() {
   const sbRef = useRef<any>(null)
   const sb = useCallback(() => { if (!sbRef.current) sbRef.current = getSB(); return sbRef.current }, [])
 
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [needsSetup, setNeedsSetup] = useState(false)  // show ProfileSetupModal
   const [users, setUsers] = useState<UserProfile[]>([])
-  const [incomingInvites, setIncomingInvites] = useState<Invite[]>([])
+  const [invites, setInvites] = useState<Invite[]>([])
   const [activeSession, setActiveSession] = useState<Session | null>(null)
-  const [metrics, setMetrics] = useState<Metrics>({ online: 0, sessions: 0, totalUsers: 0, totalSessions: 0 })
-  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onlineCount, setOnlineCount] = useState(0)
+  const [sessionCount, setSessionCount] = useState(0)
+  const [activeTab, setActiveTab] = useState<Tab>('peers')
+  const [showAuth, setShowAuth] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
   const [inviteTarget, setInviteTarget] = useState<UserProfile | null>(null)
   const [sendingInvite, setSendingInvite] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [loadingUsers, setLoadingUsers] = useState(true)
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3500)
+    setToast({ msg, type }); setTimeout(() => setToast(null), 3500)
   }, [])
 
   // ── Fetchers ─────────────────────────────────────────────────────────────
-  const fetchProfile = useCallback(async (userId: string) => {
-    const client = sb(); if (!client) return
-    const { data } = await client.from('users').select('*').eq('id', userId).maybeSingle()
+  const fetchProfile = useCallback(async (uid: string) => {
+    const c = sb(); if (!c) return null
+    const { data } = await c.from('users').select('*').eq('id', uid).maybeSingle()
     if (data) setProfile(data)
     return data
   }, [sb])
 
-  const ensureProfile = useCallback(async (userId: string) => {
-    const client = sb(); if (!client) return
-    const { data: ex } = await client.from('users').select('*').eq('id', userId).maybeSingle()
-    if (ex) { setProfile(ex); return ex }
-    const res = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId }) })
-    if (res.ok) { const { user } = await res.json(); if (user) setProfile(user); return user }
-  }, [sb])
-
   const fetchUsers = useCallback(async () => {
-    const client = sb(); if (!client) return
+    const c = sb(); if (!c) return
     const since = new Date(Date.now() - 3 * 60 * 1000).toISOString()
-    const { data } = await client.from('users').select('*').gte('last_active', since).order('last_active', { ascending: false }).limit(100)
-    if (data) setUsers(data)
+    const { data } = await c.from('users').select('*').gte('last_active', since).order('last_active', { ascending: false }).limit(100)
+    if (data) { setUsers(data); setOnlineCount(data.length) }
     setLoadingUsers(false)
   }, [sb])
 
-  const fetchInvites = useCallback(async (userId: string) => {
-    const client = sb(); if (!client) return
-    const { data } = await client
-      .from('invites')
-      .select('*, sender:sender_id(id, username, experience, domain, target_role)')
-      .eq('receiver_id', userId).eq('status', 'pending')
-    if (data) setIncomingInvites(data as Invite[])
+  const fetchInvites = useCallback(async (uid: string) => {
+    const c = sb(); if (!c) return
+    const { data } = await c.from('invites')
+      .select('*, sender:sender_id(id,username,experience,domain,target_role)')
+      .eq('receiver_id', uid).eq('status', 'pending')
+    if (data) setInvites(data as Invite[])
   }, [sb])
 
-  const fetchActiveSession = useCallback(async (userId: string) => {
-    const client = sb(); if (!client) return
-    const { data } = await client.from('sessions').select('*').or(`user1_id.eq.${userId},user2_id.eq.${userId}`).eq('status', 'active').limit(1)
-    if (data && data.length > 0) {
+  const fetchSession = useCallback(async (uid: string) => {
+    const c = sb(); if (!c) return
+    const { data } = await c.from('sessions').select('*')
+      .or(`user1_id.eq.${uid},user2_id.eq.${uid}`).eq('status', 'active').limit(1)
+    if (data?.length) {
       const s = data[0]
-      const otherId = s.user1_id === userId ? s.user2_id : s.user1_id
-      const { data: ou } = await client.from('users').select('username').eq('id', otherId).maybeSingle()
-      setActiveSession({ ...s, other_username: ou?.username || 'Anonymous' })
-    } else { setActiveSession(null) }
+      const oid = s.user1_id === uid ? s.user2_id : s.user1_id
+      const { data: ou } = await c.from('users').select('username').eq('id', oid).maybeSingle()
+      setActiveSession({ ...s, other_username: ou?.username || 'Peer' })
+    } else setActiveSession(null)
   }, [sb])
 
-  const fetchMetrics = useCallback(async () => {
-    const client = sb(); if (!client) return
-    const since = new Date(Date.now() - 3 * 60 * 1000).toISOString()
-    const [{ count: online }, { count: sessions }, { count: totalUsers }, { count: totalSessions }] = await Promise.all([
-      client.from('users').select('*', { count: 'exact', head: true }).gte('last_active', since),
-      client.from('sessions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-      client.from('users').select('*', { count: 'exact', head: true }),
-      client.from('sessions').select('*', { count: 'exact', head: true }),
-    ])
-    setMetrics({ online: online || 0, sessions: sessions || 0, totalUsers: totalUsers || 0, totalSessions: totalSessions || 0 })
+  const fetchSessionCount = useCallback(async () => {
+    const c = sb(); if (!c) return
+    const { count } = await c.from('sessions').select('*', { count: 'exact', head: true }).eq('status', 'active')
+    setSessionCount(count || 0)
   }, [sb])
 
-  const updateLastActive = useCallback(async (userId: string) => {
-    const client = sb(); if (!client) return
-    await client.from('users').update({ last_active: new Date().toISOString() }).eq('id', userId)
+  const pingActive = useCallback(async (uid: string) => {
+    const c = sb(); if (!c) return
+    await c.from('users').update({ last_active: new Date().toISOString() }).eq('id', uid)
   }, [sb])
 
-  // ── Boot ──────────────────────────────────────────────────────────────────
+  // ── Boot ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     const client = getSB(); if (!client) return
     sbRef.current = client
@@ -164,50 +127,58 @@ export default function HomePage() {
       const { data: { session } } = await client.auth.getSession()
       if (session?.user) {
         setAuthUser(session.user as User)
-        await ensureProfile(session.user.id)
-        await fetchInvites(session.user.id)
-        await fetchActiveSession(session.user.id)
-        await updateLastActive(session.user.id)
+        const p = await fetchProfile(session.user.id)
+        if (!p) {
+          setNeedsSetup(true)  // New user — show profile setup
+        } else {
+          await fetchInvites(session.user.id)
+          await fetchSession(session.user.id)
+          await pingActive(session.user.id)
+        }
       }
       await fetchUsers()
-      await fetchMetrics()
+      await fetchSessionCount()
     }
     boot()
 
     const { data: { subscription } } = client.auth.onAuthStateChange(async (_e: string, session: any) => {
       if (session?.user) {
         setAuthUser(session.user as User)
-        await ensureProfile(session.user.id)
-        await fetchInvites(session.user.id)
-        await fetchActiveSession(session.user.id)
-        await updateLastActive(session.user.id)
-        await fetchUsers()
+        setShowAuth(false)
+        const p = await fetchProfile(session.user.id)
+        if (!p) {
+          setNeedsSetup(true)  // Brand new user
+        } else {
+          await fetchInvites(session.user.id)
+          await fetchSession(session.user.id)
+          await pingActive(session.user.id)
+          await fetchUsers()
+        }
       } else {
-        setAuthUser(null); setProfile(null)
+        setAuthUser(null); setProfile(null); setNeedsSetup(false)
       }
     })
-
     return () => subscription.unsubscribe()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── Realtime + heartbeat ──────────────────────────────────────────────────
+  // ── Realtime ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    const client = sb(); if (!client || !authUser) return
-    const ch1 = client.channel('rt-users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => { fetchUsers(); fetchMetrics() }).subscribe()
-    const ch2 = client.channel('rt-invites').on('postgres_changes', { event: '*', schema: 'public', table: 'invites' }, () => { fetchInvites(authUser.id); fetchProfile(authUser.id) }).subscribe()
-    const ch3 = client.channel('rt-sessions').on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => { fetchActiveSession(authUser.id); fetchMetrics() }).subscribe()
-    const hb = setInterval(() => updateLastActive(authUser.id), 30_000)
+    const c = sb(); if (!c || !authUser) return
+    const ch1 = c.channel('rt-users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => { fetchUsers(); fetchSessionCount() }).subscribe()
+    const ch2 = c.channel('rt-invites').on('postgres_changes', { event: '*', schema: 'public', table: 'invites' }, () => fetchInvites(authUser.id)).subscribe()
+    const ch3 = c.channel('rt-sessions').on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => { fetchSession(authUser.id); fetchSessionCount() }).subscribe()
+    const hb = setInterval(() => pingActive(authUser.id), 30_000)
     return () => { ch1.unsubscribe(); ch2.unsubscribe(); ch3.unsubscribe(); clearInterval(hb) }
-  }, [authUser, sb, fetchUsers, fetchMetrics, fetchInvites, fetchProfile, fetchActiveSession, updateLastActive])
+  }, [authUser, sb, fetchUsers, fetchSessionCount, fetchInvites, fetchSession, pingActive])
 
-  // ── Metrics poll for non-auth users ───────────────────────────────────────
+  // ── Metrics poll for non-auth ─────────────────────────────────────────────
   useEffect(() => {
     if (authUser) return
-    fetchMetrics()
-    const interval = setInterval(fetchMetrics, 30_000)
-    return () => clearInterval(interval)
-  }, [authUser, fetchMetrics])
+    fetchUsers(); fetchSessionCount()
+    const t = setInterval(() => { fetchUsers(); fetchSessionCount() }, 30_000)
+    return () => clearInterval(t)
+  }, [authUser, fetchUsers, fetchSessionCount])
 
   // ── Actions ──────────────────────────────────────────────────────────────
   const handleSendInvite = async (note: string) => {
@@ -220,15 +191,9 @@ export default function HomePage() {
         body: JSON.stringify({ senderId: authUser.id, receiverId: inviteTarget.id, note }),
       })
       const data = await res.json()
-      if (res.ok) { showToast('Invite sent! ☕ Coffee offered'); await fetchProfile(authUser.id); setInviteTarget(null) }
+      if (res.ok) { showToast('Coffee offered! ☕'); await fetchProfile(authUser.id); setInviteTarget(null) }
       else showToast(data.error || 'Failed to send invite', 'error')
     } finally { setSendingInvite(false) }
-  }
-
-  const handleClickInvite = (user: UserProfile) => {
-    if (!authUser || !profile) { setShowOnboarding(true); return }
-    if (profile.coffee_balance < 1) { setShowPayment(true); return }
-    setInviteTarget(user)
   }
 
   const handleAccept = async (invite: Invite) => {
@@ -236,51 +201,72 @@ export default function HomePage() {
     const res = await fetch('/api/invites/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ inviteId: invite.id, userId: authUser.id }) })
     const data = await res.json()
     if (res.ok && data.session) {
-      const client = sb()
-      const otherId = data.session.user1_id === authUser.id ? data.session.user2_id : data.session.user1_id
-      const { data: ou } = await client.from('users').select('username').eq('id', otherId).maybeSingle()
-      setActiveSession({ ...data.session, other_username: ou?.username || 'User' })
-      setIncomingInvites(p => p.filter(i => i.id !== invite.id))
+      const c = sb()
+      const oid = data.session.user1_id === authUser.id ? data.session.user2_id : data.session.user1_id
+      const { data: ou } = await c.from('users').select('username').eq('id', oid).maybeSingle()
+      setActiveSession({ ...data.session, other_username: ou?.username || 'Peer' })
+      setInvites(p => p.filter(i => i.id !== invite.id))
       showToast('Session started! 🎙️')
     } else showToast(data.error || 'Failed to accept', 'error')
   }
 
   const handleReject = async (invite: Invite) => {
-    if (!authUser) return
-    const res = await fetch('/api/invites/reject', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ inviteId: invite.id, userId: authUser.id }) })
-    if (res.ok) { setIncomingInvites(p => p.filter(i => i.id !== invite.id)); showToast('Invite declined') }
+    const res = await fetch('/api/invites/reject', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ inviteId: invite.id, userId: authUser?.id }) })
+    if (res.ok) { setInvites(p => p.filter(i => i.id !== invite.id)); showToast('Invite declined') }
   }
 
-  const handleSessionEnd = async () => {
-    setActiveSession(null)
-    if (authUser) await fetchProfile(authUser.id)
-    showToast('Session ended. Great practice! 👏')
+  const handleLogout = async () => {
+    const c = sb(); if (c) await c.auth.signOut()
+    setShowProfile(false)
+    showToast('Signed out successfully')
   }
 
-  // ── Sorted user list ──────────────────────────────────────────────────────
-  const otherUsers = users
+  const sortedPeers = users
     .filter(u => u.id !== authUser?.id)
     .map(u => ({ ...u, _score: profile ? matchScore(profile, u) : 0 }))
     .sort((a, b) => b._score - a._score)
 
+  const pendingInviteCount = invites.length
+
+  // ── RENDER ────────────────────────────────────────────────────────────────
   return (
     <div className="app">
       {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
 
       {activeSession && authUser && (
-        <VoiceRoom channelName={activeSession.channel_name} sessionId={activeSession.id} userId={authUser.id} otherUsername={activeSession.other_username || 'User'} onEnd={handleSessionEnd} />
+        <VoiceRoom channelName={activeSession.channel_name} sessionId={activeSession.id}
+          userId={authUser.id} otherUsername={activeSession.other_username || 'Peer'}
+          onEnd={() => { setActiveSession(null); if (authUser) fetchProfile(authUser.id); showToast('Great session! 👏') }} />
       )}
 
-      {showOnboarding && (
-        <OnboardingModal onClose={() => { setShowOnboarding(false); fetchUsers(); if (authUser) fetchProfile(authUser.id) }} />
+      {showAuth && <OnboardingModal onClose={() => setShowAuth(false)} />}
+
+      {needsSetup && authUser && (
+        <ProfileSetupModal userId={authUser.id} onComplete={async () => {
+          setNeedsSetup(false)
+          if (authUser) {
+            const p = await fetchProfile(authUser.id)
+            if (p) { await fetchInvites(authUser.id); await fetchSession(authUser.id) }
+          }
+          await fetchUsers()
+          showToast('Profile created! You have 1 free coffee ☕')
+        }} />
+      )}
+
+      {showProfile && profile && (
+        <ProfileModal profile={profile} onClose={() => setShowProfile(false)}
+          onUpdate={p => { setProfile(p); showToast('Profile updated!') }}
+          onLogout={handleLogout} />
       )}
 
       {showPayment && authUser && (
-        <PaymentModal userId={authUser.id} onClose={() => setShowPayment(false)} onSuccess={coffees => { showToast(`+${coffees} coffees added! ☕`); fetchProfile(authUser.id) }} />
+        <PaymentModal userId={authUser.id} onClose={() => setShowPayment(false)}
+          onSuccess={n => { showToast(`+${n} coffees! ☕`); fetchProfile(authUser.id) }} />
       )}
 
       {inviteTarget && authUser && profile && (
-        <InviteModal receiver={inviteTarget} onSend={handleSendInvite} onClose={() => setInviteTarget(null)} sending={sendingInvite} />
+        <InviteModal receiver={inviteTarget} onSend={handleSendInvite}
+          onClose={() => setInviteTarget(null)} sending={sendingInvite} />
       )}
 
       {/* ─── HEADER ─── */}
@@ -293,196 +279,194 @@ export default function HomePage() {
           <div className="header-right">
             {profile ? (
               <>
-                <button className="coffee-badge" onClick={() => setShowPayment(true)} title="Coffee balance">
-                  ☕ {profile.coffee_balance}
+                <button className="coffee-badge" onClick={() => setShowPayment(true)}>☕ {profile.coffee_balance}</button>
+                <button className="avatar header-avatar" onClick={() => setShowProfile(true)} title="Your profile">
+                  {profile.username.slice(0, 2).toUpperCase()}
                 </button>
-                <button className="btn btn-primary btn-sm" onClick={() => setShowPayment(true)}>Top Up</button>
-                <div className="header-user" title="Your profile">
-                  <div className="avatar">{profile.username.slice(0, 2).toUpperCase()}</div>
-                  <span className="username-label">{profile.username}</span>
-                </div>
               </>
             ) : (
-              <button className="btn btn-primary btn-sm" onClick={() => setShowOnboarding(true)}>
-                Get Started →
-              </button>
+              <button className="btn btn-primary btn-sm" onClick={() => setShowAuth(true)}>Get Started →</button>
             )}
           </div>
         </div>
       </header>
 
-      {/* ─── HERO (non-auth only) ─── */}
+      {/* ─── TAB NAV (logged-in only, desktop) ─── */}
+      {authUser && profile && (
+        <div className="tab-nav">
+          <div className="container tab-nav-inner">
+            <button className={`tab-btn${activeTab === 'peers' ? ' active' : ''}`} onClick={() => setActiveTab('peers')}>
+              🔍 Find Peers
+            </button>
+            <button className={`tab-btn${activeTab === 'requests' ? ' active' : ''}`} onClick={() => setActiveTab('requests')}>
+              🔔 Requests {pendingInviteCount > 0 && <span className="tab-badge">{pendingInviteCount}</span>}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── HERO (non-auth) ─── */}
       {!authUser && (
         <section className="hero">
           <div className="container">
-            <div className="hero-badge">🚀 Live Beta · Free to Try</div>
-            <h1 className="hero-title">
-              Offer a Peer a Coffee
-              <br /><span className="hero-accent">Practice Interviews Together</span>
-            </h1>
-            <p className="hero-subtitle">
-              Anonymous, voice-only mock sessions with real people.
-              <br className="hide-mobile" /> Show up. Practice. Get hired.
-            </p>
+            <div className="hero-badge">🚀 Free Beta · Join Now</div>
+            <h1 className="hero-title">Offer a Peer a Coffee<br /><span className="hero-accent">Practice Interviews Together</span></h1>
+            <p className="hero-subtitle">Anonymous voice-only mock sessions.<br className="hide-mobile" /> Show up. Practice. Get hired.</p>
             <div className="hero-actions">
-              <button className="btn btn-primary btn-lg" onClick={() => setShowOnboarding(true)}>
-                Start Practicing ☕
-              </button>
+              <button className="btn btn-primary btn-lg" onClick={() => setShowAuth(true)}>Start Practicing ☕</button>
               <span className="hero-note">1 free coffee on signup · No card needed</span>
             </div>
           </div>
         </section>
       )}
 
-      <main className="main container">
+      <main className={`main container${authUser ? ' has-bottom-nav' : ''}`}>
 
-        {/* ─── LIVE METRICS ─── */}
+        {/* ─── METRICS (always visible) ─── */}
         <section className="metrics-section">
-          <div className="metrics-grid">
+          <div className="metrics-grid-2">
             <div className="metric-card">
               <div className="metric-dot green" />
-              <div className="metric-body">
-                <span className="metric-value">{metrics.online}</span>
-                <span className="metric-label">Online Now</span>
-              </div>
+              <div><span className="metric-value">{onlineCount}</span><span className="metric-label">Online Now</span></div>
             </div>
             <div className="metric-card">
               <div className="metric-dot blue" />
-              <div className="metric-body">
-                <span className="metric-value">{metrics.sessions}</span>
-                <span className="metric-label">Live Sessions</span>
-              </div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-dot purple" />
-              <div className="metric-body">
-                <span className="metric-value">{metrics.totalUsers}</span>
-                <span className="metric-label">Total Peers</span>
-              </div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-dot coffee" />
-              <div className="metric-body">
-                <span className="metric-value">{metrics.totalSessions}</span>
-                <span className="metric-label">Coffees Shared</span>
-              </div>
+              <div><span className="metric-value">{sessionCount}</span><span className="metric-label">Live Sessions</span></div>
             </div>
           </div>
         </section>
 
-        {/* ─── INCOMING INVITES ─── */}
-        {authUser && incomingInvites.length > 0 && (
+        {/* ─── FIND PEERS TAB ─── */}
+        {(!authUser || activeTab === 'peers') && (
           <section className="section">
-            <h2 className="section-title">
-              <span className="pulse-dot" />
-              Someone offered you a coffee!
-            </h2>
-            <div className="invites-list">
-              {incomingInvites.map(invite => (
-                <div key={invite.id} className="invite-card v2">
-                  <div className="invite-sender-profile">
-                    <div className="avatar md">{invite.sender?.username?.slice(0, 2).toUpperCase() || '??'}</div>
-                    <div className="invite-sender-info">
-                      <p className="invite-from">{invite.sender?.username || 'Someone'}</p>
-                      <div className="invite-tags">
-                        {invite.sender?.experience && <span className="tag">{invite.sender.experience}</span>}
-                        {invite.sender?.domain && <span className="tag">{invite.sender.domain}</span>}
-                        {invite.sender?.target_role && <span className="tag tag-role">🎯 {invite.sender.target_role}</span>}
-                      </div>
-                      <p className="invite-exp">expires {formatDistanceToNow(new Date(invite.expires_at), { addSuffix: true })}</p>
-                    </div>
-                  </div>
-                  {invite.note && (
-                    <div className="invite-note-block">
-                      <span className="invite-note-quote">&ldquo;</span>
-                      {invite.note}
-                    </div>
-                  )}
-                  <div className="invite-actions">
-                    <button className="btn btn-success btn-sm" onClick={() => handleAccept(invite)}>Accept 🎙️</button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleReject(invite)}>Decline</button>
-                  </div>
-                </div>
-              ))}
+            <div className="section-header">
+              <h2 className="section-title">Available to Practice</h2>
+              {!authUser && <button className="btn btn-ghost btn-sm" onClick={() => setShowAuth(true)}>Join →</button>}
             </div>
+            {loadingUsers ? (
+              <div className="users-grid">{[...Array(6)].map((_, i) => <div key={i} className="user-card skeleton" />)}</div>
+            ) : sortedPeers.length === 0 ? (
+              <div className="empty-state">
+                <p className="empty-icon">☕</p>
+                <p className="empty-title">No one here yet</p>
+                <p className="empty-subtitle">Share the link — be the first coffee at the table.</p>
+                {!authUser && <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setShowAuth(true)}>Join Now →</button>}
+              </div>
+            ) : (
+              <div className="users-grid">
+                {sortedPeers.map(user => (
+                  <div key={user.id} className="user-card">
+                    <div className="user-card-top">
+                      <div className="avatar md">{user.username.slice(0, 2).toUpperCase()}</div>
+                      <div className="online-dot" />
+                    </div>
+                    <div className="user-card-body">
+                      <h3 className="user-name">{user.username}</h3>
+                      <div className="user-tags">
+                        <span className="tag">{user.experience}</span>
+                        {user.domain && <span className="tag">{user.domain}</span>}
+                      </div>
+                      {user.target_role && <span className="user-role">🎯 {user.target_role}</span>}
+                      <span className="user-active">{formatDistanceToNow(new Date(user.last_active || user.created_at || Date.now()), { addSuffix: true })}</span>
+                      {profile && user._score >= 50 && <span className="match-badge">⚡ Great match</span>}
+                    </div>
+                    <button className="btn btn-primary btn-sm invite-btn" onClick={() => {
+                      if (!authUser || !profile) { setShowAuth(true); return }
+                      setInviteTarget(user)
+                    }}>
+                      ☕ Offer Coffee
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
-        {/* ─── PEER LIST ─── */}
-        <section className="section">
-          <div className="section-header">
-            <h2 className="section-title">Available to Practice</h2>
-            {!authUser && (
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowOnboarding(true)}>Join to invite →</button>
-            )}
-          </div>
-
-          {loadingUsers ? (
-            <div className="loading-grid">
-              {[...Array(6)].map((_, i) => <div key={i} className="user-card skeleton" />)}
-            </div>
-          ) : otherUsers.length === 0 ? (
-            <div className="empty-state">
-              <p className="empty-icon">☕</p>
-              <p className="empty-title">No one here yet</p>
-              <p className="empty-subtitle">Share this link — be the first coffee at the table.</p>
-              {!authUser && <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setShowOnboarding(true)}>Join Now →</button>}
-            </div>
-          ) : (
-            <div className="users-grid">
-              {otherUsers.map(user => (
-                <div key={user.id} className="user-card">
-                  <div className="user-card-top">
-                    <div className="avatar md">{user.username.slice(0, 2).toUpperCase()}</div>
-                    <div className="online-dot" />
-                  </div>
-                  <div className="user-card-body">
-                    <h3 className="user-name">{user.username}</h3>
-                    <div className="user-tags">
-                      <span className="tag">{user.experience}</span>
-                      {user.domain && <span className="tag">{user.domain}</span>}
+        {/* ─── REQUESTS TAB ─── */}
+        {authUser && activeTab === 'requests' && (
+          <section className="section">
+            <h2 className="section-title" style={{ marginBottom: 16 }}>
+              <span className="pulse-dot" />
+              Incoming Requests
+            </h2>
+            {invites.length === 0 ? (
+              <div className="empty-state">
+                <p className="empty-icon">🔔</p>
+                <p className="empty-title">No pending requests</p>
+                <p className="empty-subtitle">When someone offers you a coffee, it'll appear here.</p>
+              </div>
+            ) : (
+              <div className="invites-list">
+                {invites.map(invite => (
+                  <div key={invite.id} className="invite-card v2">
+                    <div className="invite-sender-profile">
+                      <div className="avatar md">{invite.sender?.username?.slice(0, 2).toUpperCase() || '??'}</div>
+                      <div className="invite-sender-info">
+                        <p className="invite-from">{invite.sender?.username || 'Someone'}</p>
+                        <div className="invite-tags">
+                          {invite.sender?.experience && <span className="tag">{invite.sender.experience}</span>}
+                          {invite.sender?.domain && <span className="tag">{invite.sender.domain}</span>}
+                          {invite.sender?.target_role && <span className="tag tag-role">🎯 {invite.sender.target_role}</span>}
+                        </div>
+                        <p className="invite-exp">expires {formatDistanceToNow(new Date(invite.expires_at), { addSuffix: true })}</p>
+                      </div>
                     </div>
-                    {user.target_role && <span className="user-role">🎯 {user.target_role}</span>}
-                    <span className="user-active">{formatDistanceToNow(new Date(user.last_active), { addSuffix: true })}</span>
-                    {profile && user._score >= 50 && <span className="match-badge">⚡ Great match</span>}
+                    {invite.note && (
+                      <div className="invite-note-block">
+                        <span className="invite-note-quote">&ldquo;</span>{invite.note}
+                      </div>
+                    )}
+                    <div className="invite-actions">
+                      <button className="btn btn-success btn-sm" onClick={() => handleAccept(invite)}>Accept 🎙️</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleReject(invite)}>Decline</button>
+                    </div>
                   </div>
-                  <button
-                    className="btn btn-primary btn-sm invite-btn"
-                    onClick={() => handleClickInvite(user)}
-                  >
-                    ☕ Invite
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* ─── HOW IT WORKS (non-auth) ─── */}
         {!authUser && (
           <section className="how-section">
             <h2 className="section-title centered">How It Works</h2>
             <div className="steps-grid">
-              <div className="step">
-                <div className="step-num">1</div>
-                <h3 className="step-title">Create Your Profile</h3>
-                <p className="step-desc">Verify with email in seconds. Get 1 free coffee to start.</p>
-              </div>
-              <div className="step">
-                <div className="step-num">2</div>
-                <h3 className="step-title">Offer a Coffee</h3>
-                <p className="step-desc">Find a peer and offer them a coffee to invite them to practice together.</p>
-              </div>
-              <div className="step">
-                <div className="step-num">3</div>
-                <h3 className="step-title">Practice Live</h3>
-                <p className="step-desc">15-minute voice session. Take turns. Give feedback. Level up.</p>
-              </div>
+              {[
+                { n: 1, t: 'Sign Up Free', d: 'Verify with email in seconds. Get 1 free coffee to start.' },
+                { n: 2, t: 'Offer a Coffee', d: 'Find a peer and offer them a coffee to practice together.' },
+                { n: 3, t: 'Practice Live', d: '15-min voice call. Take turns interviewing. Level up.' },
+              ].map(s => (
+                <div key={s.n} className="step">
+                  <div className="step-num">{s.n}</div>
+                  <h3 className="step-title">{s.t}</h3>
+                  <p className="step-desc">{s.d}</p>
+                </div>
+              ))}
             </div>
           </section>
         )}
       </main>
 
+      {/* ─── BOTTOM NAV (mobile, logged-in) ─── */}
+      {authUser && profile && (
+        <nav className="bottom-nav">
+          <button className={`bottom-nav-btn${activeTab === 'peers' ? ' active' : ''}`} onClick={() => setActiveTab('peers')}>
+            <span className="bnb-icon">🔍</span><span className="bnb-label">Find</span>
+          </button>
+          <button className={`bottom-nav-btn${activeTab === 'requests' ? ' active' : ''}`} onClick={() => setActiveTab('requests')}>
+            <span className="bnb-icon">🔔</span>
+            {pendingInviteCount > 0 && <span className="bnb-badge">{pendingInviteCount}</span>}
+            <span className="bnb-label">Requests</span>
+          </button>
+          <button className="bottom-nav-btn" onClick={() => setShowProfile(true)}>
+            <span className="bnb-icon">👤</span><span className="bnb-label">Profile</span>
+          </button>
+        </nav>
+      )}
+
+      {/* ─── FOOTER ─── */}
       <footer className="footer">
         <div className="container footer-inner">
           <span className="footer-logo">☕ MatchMyInterview</span>
