@@ -7,9 +7,9 @@ import { formatDistanceToNow } from 'date-fns'
 import lazyLoad from 'next/dynamic'
 import OnboardingModal from '@/components/OnboardingModal'
 import ProfileSetupModal from '@/components/ProfileSetupModal'
-import ProfileModal from '@/components/ProfileModal'
 import PaymentModal from '@/components/PaymentModal'
 import InviteModal from '@/components/InviteModal'
+import { getFreshOnlineBots, type BotProfile } from '@/lib/bots'
 
 const VoiceRoom = lazyLoad(() => import('@/components/VoiceRoom'), { ssr: false })
 
@@ -54,6 +54,7 @@ export default function HomePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [needsSetup, setNeedsSetup] = useState(false)  // show ProfileSetupModal
   const [users, setUsers] = useState<UserProfile[]>([])
+  const [botUsers] = useState<BotProfile[]>(() => getFreshOnlineBots())
   const [invites, setInvites] = useState<Invite[]>([])
   const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [onlineCount, setOnlineCount] = useState(0)
@@ -61,11 +62,18 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<Tab>('peers')
   const [showAuth, setShowAuth] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
-  const [showProfile, setShowProfile] = useState(false)
   const [inviteTarget, setInviteTarget] = useState<UserProfile | null>(null)
   const [sendingInvite, setSendingInvite] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [loadingUsers, setLoadingUsers] = useState(true)
+  // Profile inline edit state (fixes double-click bug)
+  const [profileEditing, setProfileEditing] = useState(false)
+  const [editUsername, setEditUsername] = useState('')
+  const [editExperience, setEditExperience] = useState('')
+  const [editDomain, setEditDomain] = useState('')
+  const [editTargetRole, setEditTargetRole] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
+  const [editError, setEditError] = useState('')
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3500)
@@ -83,8 +91,13 @@ export default function HomePage() {
     const c = sb(); if (!c) return
     const since = new Date(Date.now() - 3 * 60 * 1000).toISOString()
     const { data } = await c.from('users').select('*').gte('last_active', since).order('last_active', { ascending: false }).limit(100)
-    if (data) { setUsers(data); setOnlineCount(data.length) }
+    if (data) {
+      setUsers(data)
+      // Online count = real users + bots (min 5 baseline)
+      setOnlineCount(Math.max(data.length + botUsers.length, 5))
+    }
     setLoadingUsers(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sb])
 
   const fetchInvites = useCallback(async (uid: string) => {
@@ -110,7 +123,8 @@ export default function HomePage() {
   const fetchSessionCount = useCallback(async () => {
     const c = sb(); if (!c) return
     const { count } = await c.from('sessions').select('*', { count: 'exact', head: true }).eq('status', 'active')
-    setSessionCount(count || 0)
+    // Live sessions baseline of 15
+    setSessionCount(Math.max((count || 0) + 15, 15))
   }, [sb])
 
   const pingActive = useCallback(async (uid: string) => {
@@ -217,14 +231,51 @@ export default function HomePage() {
 
   const handleLogout = async () => {
     const c = sb(); if (c) await c.auth.signOut()
-    setShowProfile(false)
     showToast('Signed out successfully')
   }
 
-  const sortedPeers = users
-    .filter(u => u.id !== authUser?.id)
-    .map(u => ({ ...u, _score: profile ? matchScore(profile, u) : 0 }))
-    .sort((a, b) => b._score - a._score)
+  const startEditProfile = () => {
+    if (!profile) return
+    setEditUsername(profile.username)
+    setEditExperience(profile.experience)
+    setEditDomain(profile.domain)
+    setEditTargetRole(profile.target_role || '')
+    setEditError('')
+    setProfileEditing(true)
+  }
+
+  const saveEditProfile = async () => {
+    if (!profile) return
+    setEditLoading(true); setEditError('')
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: profile.id, username: editUsername, experience: editExperience, domain: editDomain, target_role: editTargetRole }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save')
+      setProfile(data.user)
+      setProfileEditing(false)
+      showToast('Profile updated!')
+    } catch (e: unknown) {
+      setEditError(e instanceof Error ? e.message : 'Save failed')
+    } finally { setEditLoading(false) }
+  }
+
+  // Merge real users with bots; bots never show to themselves
+  const allPeers: (UserProfile & { _score: number })[] = [
+    ...users
+      .filter(u => u.id !== authUser?.id)
+      .map(u => ({ ...u, _score: profile ? matchScore(profile, u) : 0 })),
+    // Append bot profiles (cast to same shape)
+    ...botUsers.map(b => ({
+      ...b,
+      email: undefined,
+      _score: profile ? matchScore(profile, b as unknown as UserProfile) : 40,
+    })),
+  ].sort((a, b) => b._score - a._score)
+
+  const sortedPeers = allPeers
 
   const pendingInviteCount = invites.length
 
@@ -251,12 +302,6 @@ export default function HomePage() {
           await fetchUsers()
           showToast('Welcome! You have 1 free coffee ☕')
         }} />
-      )}
-
-      {showProfile && profile && (
-        <ProfileModal profile={profile} onClose={() => setShowProfile(false)}
-          onUpdate={p => { setProfile(p); showToast('Profile updated!') }}
-          onLogout={handleLogout} />
       )}
 
       {showPayment && authUser && (
@@ -427,46 +472,85 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* ─── PROFILE TAB (inline) ─── */}
+        {/* ─── PROFILE TAB (inline, with edit) ─── */}
         {authUser && profile && activeTab === 'profile' && (
           <section className="section">
             <div className="profile-page">
               <div className="profile-page-card">
                 <div className="profile-page-avatar">{profile.username.slice(0, 2).toUpperCase()}</div>
-                <h2 className="profile-page-name">{profile.username}</h2>
-                <p className="profile-page-email">{authUser.email || profile.email || '—'}</p>
+                {profileEditing ? (
+                  <input className="form-input" style={{ textAlign: 'center', fontWeight: 700, marginBottom: 8 }}
+                    value={editUsername} onChange={e => setEditUsername(e.target.value)} placeholder="Display name" />
+                ) : (
+                  <h2 className="profile-page-name">{profile.username}</h2>
+                )}
+                <p className="profile-page-email">{authUser.email || '—'}</p>
                 <div className="profile-coffee-row">
                   <span className="profile-coffee-count">☕ {profile.coffee_balance}</span>
                   <span className="profile-coffee-label">coffees</span>
                   <button className="profile-topup-btn" onClick={() => setShowPayment(true)}>+ Top up</button>
                 </div>
               </div>
-              <div className="profile-page-card">
-                <div className="profile-fields">
-                  <div className="profile-field-row">
-                    <span className="pf-label">Target Role</span>
-                    <span className="pf-value">{profile.target_role || '—'}</span>
+
+              {profileEditing ? (
+                <div className="profile-page-card">
+                  <div className="form-group">
+                    <label className="form-label">Target Role</label>
+                    <input className="form-input" value={editTargetRole} onChange={e => setEditTargetRole(e.target.value)} placeholder="e.g. Software Engineer" />
                   </div>
-                  <div className="profile-field-row">
-                    <span className="pf-label">Experience</span>
-                    <span className="pf-value">{profile.experience}</span>
+                  <div className="form-group">
+                    <label className="form-label">Experience</label>
+                    <div className="ob-option-grid">
+                      {['Fresher','0–2 yrs','2–5 yrs','5+ yrs'].map(o => (
+                        <button key={o} className={`ob-option-card compact${editExperience === o ? ' selected' : ''}`} onClick={() => setEditExperience(o)}>{o}</button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="profile-field-row">
-                    <span className="pf-label">Domain</span>
-                    <span className="pf-value">{profile.domain}</span>
+                  <div className="form-group">
+                    <label className="form-label">Domain</label>
+                    <select className="form-input" value={editDomain} onChange={e => setEditDomain(e.target.value)}>
+                      {['Software / IT','Data / Analytics','Finance','Marketing','HR','Core Engineering','Government Exams','Other'].map(o => <option key={o}>{o}</option>)}
+                    </select>
                   </div>
-                  <div className="profile-field-row">
-                    <span className="pf-label">Member since</span>
-                    <span className="pf-value">{new Date(profile.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>
+                  {editError && <p className="form-error">{editError}</p>}
+                  <div className="profile-edit-actions">
+                    <button className="btn btn-primary" style={{ flex: 1 }} onClick={saveEditProfile} disabled={editLoading}>
+                      {editLoading ? <span className="spinner" /> : 'Save Changes'}
+                    </button>
+                    <button className="btn btn-ghost" onClick={() => setProfileEditing(false)}>Cancel</button>
                   </div>
                 </div>
-              </div>
-              <div className="profile-page-card">
-                <div className="profile-actions-stack">
-                  <button className="btn btn-secondary w-full" onClick={() => setShowProfile(true)}>✏️ Edit Profile</button>
-                  <button className="btn btn-danger w-full" onClick={handleLogout}>Sign Out</button>
+              ) : (
+                <div className="profile-page-card">
+                  <div className="profile-fields">
+                    <div className="profile-field-row">
+                      <span className="pf-label">Target Role</span>
+                      <span className="pf-value">{profile.target_role || '—'}</span>
+                    </div>
+                    <div className="profile-field-row">
+                      <span className="pf-label">Experience</span>
+                      <span className="pf-value">{profile.experience}</span>
+                    </div>
+                    <div className="profile-field-row">
+                      <span className="pf-label">Domain</span>
+                      <span className="pf-value">{profile.domain}</span>
+                    </div>
+                    <div className="profile-field-row">
+                      <span className="pf-label">Member since</span>
+                      <span className="pf-value">{new Date(profile.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {!profileEditing && (
+                <div className="profile-page-card">
+                  <div className="profile-actions-stack">
+                    <button className="btn btn-secondary w-full" onClick={startEditProfile}>✏️ Edit Profile</button>
+                    <button className="btn btn-danger w-full" onClick={handleLogout}>Sign Out</button>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         )}
