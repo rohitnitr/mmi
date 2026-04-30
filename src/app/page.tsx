@@ -116,8 +116,8 @@ export default function HomePage() {
 
   const fetchCoffeesShared = useCallback(async () => {
     const c = sb(); if (!c) return
-    // Global total (for non-auth landing)
-    const { count } = await c.from('invites').select('*', { count: 'exact', head: true }).eq('status', 'accepted')
+    // Global total = all invites ever sent (any status) — shown on landing page
+    const { count } = await c.from('invites').select('*', { count: 'exact', head: true })
     setCoffeesShared(count || 0)
   }, [sb])
 
@@ -140,44 +140,11 @@ export default function HomePage() {
     sbRef.current = client
 
     const boot = async () => {
-      // STEP 1: getSession() reads localStorage instantly — no network, no hanging.
-      // Set authChecked immediately so the UI renders without a spinner.
-      const { data: { session } } = await client.auth.getSession()
-
-      if (session?.user) {
-        setAuthUser(session.user as User)
-        setAuthChecked(true)  // Unblock render right away
-
-        const p = await fetchProfile(session.user.id)
-        if (!p) {
-          setNeedsSetup(true)
-        } else {
-          await fetchInvites(session.user.id)
-          await fetchSession(session.user.id)
-          await pingActive(session.user.id)
-          await fetchUserCoffeesShared(session.user.id)
-        }
-
-        // STEP 2: Background token validation with 3-second hard timeout.
-        // If invalid, sign out silently — never hang the UI.
-        try {
-          const race = await Promise.race([
-            client.auth.getUser(),
-            new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
-          ])
-          if (race === null) {
-            // Timeout — keep session as-is, will re-validate next visit
-          } else if ((race as any).error) {
-            await client.auth.signOut()
-            setAuthUser(null); setProfile(null); setNeedsSetup(false)
-          }
-        } catch {
-          // Network error — keep session from localStorage
-        }
-      } else {
-        // No stored session — show landing page immediately
-        setAuthChecked(true)
-      }
+      // Always sign out on page load/refresh — clean start every time.
+      // User must log in each session; prevents blank-screen stale-auth issues.
+      await client.auth.signOut()
+      setAuthUser(null); setProfile(null); setNeedsSetup(false)
+      setAuthChecked(true)
 
       await fetchUsers()
       await fetchCoffeesShared()
@@ -418,7 +385,7 @@ export default function HomePage() {
                 // Non-auth: show top 6 most recently active users
                 // Auth: show match-scored peers (excluding self)
                 const displayUsers = !authUser
-                  ? users.slice(0, 6).map(u => ({ ...u, _score: 0 }))
+                  ? users.slice(0, 8).map(u => ({ ...u, _score: 0 }))
                   : sortedPeers
 
                 return displayUsers.length === 0 ? (
