@@ -1,17 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
-// Window-cached singleton — survives React re-renders, persists session across refreshes
-// Using createBrowserClient from @supabase/ssr stores the session in cookies so the
-// server-side middleware can read + refresh it — this is what keeps users logged in.
+// Window-cached singleton — survives React re-renders, persists session across refreshes.
+// Using plain supabase-js with localStorage: OTP verifyOtp writes the session here directly.
+// The middleware handles server-side cookie refresh independently.
 export function createClient(): any {
   if (typeof window === 'undefined') return null
 
   const w = window as any
   if (!w.__mmiSupabase) {
-    w.__mmiSupabase = createBrowserClient(
+    w.__mmiSupabase = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storageKey: 'mmi-auth',
+          storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        },
+      }
     )
   }
   return w.__mmiSupabase

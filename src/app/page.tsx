@@ -124,16 +124,18 @@ export default function HomePage() {
     sbRef.current = client
 
     const boot = async () => {
-      const { data: { session } } = await client.auth.getSession()
-      if (session?.user) {
-        setAuthUser(session.user as User)
-        const p = await fetchProfile(session.user.id)
+      // getUser() makes a live network call — always returns real session state
+      // getSession() only reads localStorage and misses freshly written sessions
+      const { data: { user } } = await client.auth.getUser()
+      if (user) {
+        setAuthUser(user as User)
+        const p = await fetchProfile(user.id)
         if (!p) {
           setNeedsSetup(true)  // New user — show profile setup
         } else {
-          await fetchInvites(session.user.id)
-          await fetchSession(session.user.id)
-          await pingActive(session.user.id)
+          await fetchInvites(user.id)
+          await fetchSession(user.id)
+          await pingActive(user.id)
         }
       }
       await fetchUsers()
@@ -152,9 +154,10 @@ export default function HomePage() {
           await fetchInvites(session.user.id)
           await fetchSession(session.user.id)
           await pingActive(session.user.id)
-          await fetchUsers()
-          await fetchCoffeesShared()
         }
+        // Always refresh user list regardless of profile state
+        await fetchUsers()
+        await fetchCoffeesShared()
       } else {
         setAuthUser(null); setProfile(null); setNeedsSetup(false)
       }
