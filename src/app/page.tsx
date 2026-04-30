@@ -139,47 +139,35 @@ export default function HomePage() {
     const client = getSB(); if (!client) return
     sbRef.current = client
 
-    // Store subscription so cleanup works even though init() is async
-    let sub: any = null
-
-    const init = async () => {
-      // Sign out FIRST and AWAIT it — this clears localStorage session.
-      // Only after this do we subscribe, so the listener never sees a stale session.
-      await client.auth.signOut()
-      setAuthUser(null); setProfile(null); setNeedsSetup(false)
-      setAuthChecked(true)
-
-      // Load public landing data
-      await fetchUsers()
-      await fetchCoffeesShared()
-
-      // Subscribe AFTER signOut — listener only ever sees fresh login events
-      const { data: { subscription } } = client.auth.onAuthStateChange(async (_e: string, session: any) => {
-        if (session?.user) {
-          setAuthUser(session.user as User)
-          setShowAuth(false)
-          setAuthChecked(true)
-          const p = await fetchProfile(session.user.id)
-          if (!p) {
-            setNeedsSetup(true)
-          } else {
-            await fetchInvites(session.user.id)
-            await fetchSession(session.user.id)
-            await pingActive(session.user.id)
-            await fetchUserCoffeesShared(session.user.id)
-          }
-          await fetchUsers()
-          await fetchCoffeesShared()
+    // onAuthStateChange fires immediately with the current session (INITIAL_SESSION),
+    // then fires again on every login/logout. This is the single source of truth.
+    const { data: { subscription } } = client.auth.onAuthStateChange(async (_e: string, session: any) => {
+      if (session?.user) {
+        setAuthUser(session.user as User)
+        setShowAuth(false)
+        const p = await fetchProfile(session.user.id)
+        if (!p) {
+          setNeedsSetup(true)
         } else {
-          setAuthUser(null); setProfile(null); setNeedsSetup(false)
-          setAuthChecked(true)
+          await fetchInvites(session.user.id)
+          await fetchSession(session.user.id)
+          await pingActive(session.user.id)
+          await fetchUserCoffeesShared(session.user.id)
         }
-      })
-      sub = subscription
-    }
+        await fetchUsers()
+        await fetchCoffeesShared()
+      } else {
+        setAuthUser(null); setProfile(null); setNeedsSetup(false)
+      }
+      // Always mark auth as resolved once we get any state (logged in or not)
+      setAuthChecked(true)
+    })
 
-    init()
-    return () => sub?.unsubscribe()
+    // Load public data (peers list, coffee count) immediately on mount
+    fetchUsers()
+    fetchCoffeesShared()
+
+    return () => subscription.unsubscribe()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
