@@ -26,8 +26,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ order })
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('Razorpay create-order error:', message)
+    const message = err instanceof Error ? err.message : String(err)
+    // Log full error for debugging in Vercel
+    console.error('Razorpay create-order error:', JSON.stringify(err), message)
     return NextResponse.json({ error: `Failed to create order: ${message}` }, { status: 500 })
   }
 }

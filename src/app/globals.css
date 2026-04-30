@@ -368,3 +368,14 @@ body{font-family:var(--font);background:var(--white);color:var(--gray-900);line-
 .ob-option-card.compact{padding:8px 10px;font-size:13px;font-weight:600;color:#18181b;min-height:0}
 .ob-option-card.compact.selected{color:#fff}
 
+/* ── RECENTLY ACTIVE USERS STRIP ─────────────────────────────────────── */
+.recent-users-strip{background:#fff;border:1px solid #f0f0f0;border-radius:16px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.05),0 4px 12px rgba(0,0,0,.04)}
+.recent-users-label{font-size:11px;font-weight:600;color:#a1a1aa;letter-spacing:.4px;text-transform:uppercase;margin-bottom:12px}
+.recent-users-list{display:flex;flex-direction:column;gap:0}
+.recent-user-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f4f4f5}
+.recent-user-row:last-child{border-bottom:none}
+.recent-user-avatar{width:36px;height:36px;border-radius:50%;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.recent-user-info{flex:1;min-width:0}
+.recent-user-name{font-size:13px;font-weight:700;color:#09090b;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-user-meta{font-size:11px;color:#a1a1aa;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-user-time{font-size:11px;color:#a1a1aa;white-space:nowrap;flex-shrink:0}

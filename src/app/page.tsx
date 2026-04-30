@@ -57,7 +57,7 @@ export default function HomePage() {
   const [invites, setInvites] = useState<Invite[]>([])
   const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [onlineCount, setOnlineCount] = useState(0)
-  const [sessionCount, setSessionCount] = useState(0)
+  const [coffeesShared, setCoffeesShared] = useState(0)
   const [activeTab, setActiveTab] = useState<Tab>('peers')
   const [showAuth, setShowAuth] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
@@ -107,10 +107,10 @@ export default function HomePage() {
     } else setActiveSession(null)
   }, [sb])
 
-  const fetchSessionCount = useCallback(async () => {
+  const fetchCoffeesShared = useCallback(async () => {
     const c = sb(); if (!c) return
-    const { count } = await c.from('sessions').select('*', { count: 'exact', head: true }).eq('status', 'active')
-    setSessionCount(count || 0)
+    const { count } = await c.from('invites').select('*', { count: 'exact', head: true }).eq('status', 'accepted')
+    setCoffeesShared(count || 0)
   }, [sb])
 
   const pingActive = useCallback(async (uid: string) => {
@@ -137,7 +137,7 @@ export default function HomePage() {
         }
       }
       await fetchUsers()
-      await fetchSessionCount()
+      await fetchCoffeesShared()
     }
     boot()
 
@@ -153,6 +153,7 @@ export default function HomePage() {
           await fetchSession(session.user.id)
           await pingActive(session.user.id)
           await fetchUsers()
+          await fetchCoffeesShared()
         }
       } else {
         setAuthUser(null); setProfile(null); setNeedsSetup(false)
@@ -165,20 +166,20 @@ export default function HomePage() {
   // ── Realtime ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const c = sb(); if (!c || !authUser) return
-    const ch1 = c.channel('rt-users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => { fetchUsers(); fetchSessionCount() }).subscribe()
-    const ch2 = c.channel('rt-invites').on('postgres_changes', { event: '*', schema: 'public', table: 'invites' }, () => fetchInvites(authUser.id)).subscribe()
-    const ch3 = c.channel('rt-sessions').on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => { fetchSession(authUser.id); fetchSessionCount() }).subscribe()
+    const ch1 = c.channel('rt-users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => { fetchUsers(); fetchCoffeesShared() }).subscribe()
+    const ch2 = c.channel('rt-invites').on('postgres_changes', { event: '*', schema: 'public', table: 'invites' }, () => { fetchInvites(authUser.id); fetchCoffeesShared() }).subscribe()
+    const ch3 = c.channel('rt-sessions').on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => fetchSession(authUser.id)).subscribe()
     const hb = setInterval(() => pingActive(authUser.id), 30_000)
     return () => { ch1.unsubscribe(); ch2.unsubscribe(); ch3.unsubscribe(); clearInterval(hb) }
-  }, [authUser, sb, fetchUsers, fetchSessionCount, fetchInvites, fetchSession, pingActive])
+  }, [authUser, sb, fetchUsers, fetchCoffeesShared, fetchInvites, fetchSession, pingActive])
 
   // ── Metrics poll for non-auth ─────────────────────────────────────────────
   useEffect(() => {
     if (authUser) return
-    fetchUsers(); fetchSessionCount()
-    const t = setInterval(() => { fetchUsers(); fetchSessionCount() }, 30_000)
+    fetchUsers(); fetchCoffeesShared()
+    const t = setInterval(() => { fetchUsers(); fetchCoffeesShared() }, 30_000)
     return () => clearInterval(t)
-  }, [authUser, fetchUsers, fetchSessionCount])
+  }, [authUser, fetchUsers, fetchCoffeesShared])
 
   // ── Actions ──────────────────────────────────────────────────────────────
   const handleSendInvite = async (note: string) => {
@@ -329,10 +330,29 @@ export default function HomePage() {
               <div><span className="metric-value">{onlineCount}</span><span className="metric-label">Online Now</span></div>
             </div>
             <div className="metric-card">
-              <div className="metric-dot blue" />
-              <div><span className="metric-value">{sessionCount}</span><span className="metric-label">Live Sessions</span></div>
+              <div className="metric-dot coffee" />
+              <div><span className="metric-value">{coffeesShared}</span><span className="metric-label">Coffee Shared</span></div>
             </div>
           </div>
+
+          {/* ─── Recently Active Users (non-auth landing) ─── */}
+          {!authUser && users.length > 0 && (
+            <div className="recent-users-strip">
+              <p className="recent-users-label">Recently Active</p>
+              <div className="recent-users-list">
+                {users.slice(0, 6).map(u => (
+                  <div key={u.id} className="recent-user-row">
+                    <div className="recent-user-avatar">{u.username.slice(0, 2).toUpperCase()}</div>
+                    <div className="recent-user-info">
+                      <span className="recent-user-name">{u.username}</span>
+                      <span className="recent-user-meta">{u.domain} · {u.experience}</span>
+                    </div>
+                    <span className="recent-user-time">{formatDistanceToNow(new Date(u.last_active || u.created_at || Date.now()), { addSuffix: true })}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ─── FIND PEERS TAB ─── */}
