@@ -52,12 +52,14 @@ export default function HomePage() {
 
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [needsSetup, setNeedsSetup] = useState(false)  // show ProfileSetupModal
+  const [authChecked, setAuthChecked] = useState(false)  // true once getUser() resolves
+  const [needsSetup, setNeedsSetup] = useState(false)
   const [users, setUsers] = useState<UserProfile[]>([])
   const [invites, setInvites] = useState<Invite[]>([])
   const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [onlineCount, setOnlineCount] = useState(0)
-  const [coffeesShared, setCoffeesShared] = useState(0)
+  const [coffeesShared, setCoffeesShared] = useState(0)        // global total
+  const [userCoffeesShared, setUserCoffeesShared] = useState(0) // current user's sent coffees
   const [activeTab, setActiveTab] = useState<Tab>('peers')
   const [showAuth, setShowAuth] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
@@ -114,8 +116,17 @@ export default function HomePage() {
 
   const fetchCoffeesShared = useCallback(async () => {
     const c = sb(); if (!c) return
+    // Global total (for non-auth landing)
     const { count } = await c.from('invites').select('*', { count: 'exact', head: true }).eq('status', 'accepted')
     setCoffeesShared(count || 0)
+  }, [sb])
+
+  const fetchUserCoffeesShared = useCallback(async (uid: string) => {
+    const c = sb(); if (!c) return
+    // Coffees this user has sent (accepted invites where they were sender)
+    const { count } = await c.from('invites').select('*', { count: 'exact', head: true })
+      .eq('sender_id', uid).eq('status', 'accepted')
+    setUserCoffeesShared(count || 0)
   }, [sb])
 
   const pingActive = useCallback(async (uid: string) => {
@@ -129,19 +140,29 @@ export default function HomePage() {
     sbRef.current = client
 
     const boot = async () => {
-      // getUser() makes a live network call — always returns real session state
-      // getSession() only reads localStorage and misses freshly written sessions
-      const { data: { user } } = await client.auth.getUser()
-      if (user) {
-        setAuthUser(user as User)
-        const p = await fetchProfile(user.id)
-        if (!p) {
-          setNeedsSetup(true)  // New user — show profile setup
-        } else {
-          await fetchInvites(user.id)
-          await fetchSession(user.id)
-          await pingActive(user.id)
+      try {
+        // getUser() makes a live network call — always returns real session state
+        const { data: { user }, error } = await client.auth.getUser()
+        if (user && !error) {
+          setAuthUser(user as User)
+          const p = await fetchProfile(user.id)
+          if (!p) {
+            setNeedsSetup(true)
+          } else {
+            await fetchInvites(user.id)
+            await fetchSession(user.id)
+            await pingActive(user.id)
+            await fetchUserCoffeesShared(user.id)
+          }
+        } else if (error) {
+          // Session error — clear stale state, show logged-out view (not blank)
+          await client.auth.signOut()
+          setAuthUser(null); setProfile(null)
         }
+      } catch {
+        setAuthUser(null); setProfile(null)
+      } finally {
+        setAuthChecked(true)  // Always mark auth as resolved
       }
       await fetchUsers()
       await fetchCoffeesShared()
@@ -154,17 +175,18 @@ export default function HomePage() {
         setShowAuth(false)
         const p = await fetchProfile(session.user.id)
         if (!p) {
-          setNeedsSetup(true)  // Brand new user
+          setNeedsSetup(true)
         } else {
           await fetchInvites(session.user.id)
           await fetchSession(session.user.id)
           await pingActive(session.user.id)
+          await fetchUserCoffeesShared(session.user.id)
         }
-        // Always refresh user list regardless of profile state
         await fetchUsers()
         await fetchCoffeesShared()
       } else {
         setAuthUser(null); setProfile(null); setNeedsSetup(false)
+        setAuthChecked(true)
       }
     })
     return () => subscription.unsubscribe()
@@ -238,6 +260,18 @@ export default function HomePage() {
   const pendingInviteCount = invites.length
 
   // ── RENDER ────────────────────────────────────────────────────────────────
+
+  // Show a spinner until we know if the user is logged in or not.
+  // This prevents the blank "Get Started" flash on refresh for logged-in users.
+  if (!authChecked) {
+    return (
+      <div className="app" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+        <span style={{ fontSize: 32 }}>☕</span>
+        <span className="spinner sm" style={{ borderColor: 'rgba(0,0,0,.15)', borderTopColor: '#18181b', width: 24, height: 24, borderWidth: 3 }} />
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
@@ -339,7 +373,17 @@ export default function HomePage() {
             </div>
             <div className="metric-card">
               <div className="metric-dot coffee" />
-              <div><span className="metric-value">{coffeesShared}</span><span className="metric-label">Coffee Shared</span></div>
+              {authUser ? (
+                <div>
+                  <span className="metric-value">{userCoffeesShared}</span>
+                  <span className="metric-label">You Shared</span>
+                </div>
+              ) : (
+                <div>
+                  <span className="metric-value">{coffeesShared}</span>
+                  <span className="metric-label">Coffee Shared</span>
+                </div>
+              )}
             </div>
           </div>
         </section>

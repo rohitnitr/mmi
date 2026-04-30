@@ -2,8 +2,8 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 // Window-cached singleton — survives React re-renders, persists session across refreshes.
-// Using plain supabase-js with localStorage: OTP verifyOtp writes the session here directly.
-// The middleware handles server-side cookie refresh independently.
+// Uses Supabase's default localStorage key (sb-{ref}-auth-token).
+// Do NOT set a custom storageKey — sessions stored under different keys are lost on refresh.
 export function createClient(): any {
   if (typeof window === 'undefined') return null
 
@@ -17,8 +17,6 @@ export function createClient(): any {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
-          storageKey: 'mmi-auth',
-          storage: typeof window !== 'undefined' ? window.localStorage : undefined,
         },
       }
     )
