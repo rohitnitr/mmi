@@ -140,30 +140,45 @@ export default function HomePage() {
     sbRef.current = client
 
     const boot = async () => {
-      try {
-        // getUser() makes a live network call — always returns real session state
-        const { data: { user }, error } = await client.auth.getUser()
-        if (user && !error) {
-          setAuthUser(user as User)
-          const p = await fetchProfile(user.id)
-          if (!p) {
-            setNeedsSetup(true)
-          } else {
-            await fetchInvites(user.id)
-            await fetchSession(user.id)
-            await pingActive(user.id)
-            await fetchUserCoffeesShared(user.id)
-          }
-        } else if (error) {
-          // Session error — clear stale state, show logged-out view (not blank)
-          await client.auth.signOut()
-          setAuthUser(null); setProfile(null)
+      // STEP 1: getSession() reads localStorage instantly — no network, no hanging.
+      // Set authChecked immediately so the UI renders without a spinner.
+      const { data: { session } } = await client.auth.getSession()
+
+      if (session?.user) {
+        setAuthUser(session.user as User)
+        setAuthChecked(true)  // Unblock render right away
+
+        const p = await fetchProfile(session.user.id)
+        if (!p) {
+          setNeedsSetup(true)
+        } else {
+          await fetchInvites(session.user.id)
+          await fetchSession(session.user.id)
+          await pingActive(session.user.id)
+          await fetchUserCoffeesShared(session.user.id)
         }
-      } catch {
-        setAuthUser(null); setProfile(null)
-      } finally {
-        setAuthChecked(true)  // Always mark auth as resolved
+
+        // STEP 2: Background token validation with 3-second hard timeout.
+        // If invalid, sign out silently — never hang the UI.
+        try {
+          const race = await Promise.race([
+            client.auth.getUser(),
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+          ])
+          if (race === null) {
+            // Timeout — keep session as-is, will re-validate next visit
+          } else if ((race as any).error) {
+            await client.auth.signOut()
+            setAuthUser(null); setProfile(null); setNeedsSetup(false)
+          }
+        } catch {
+          // Network error — keep session from localStorage
+        }
+      } else {
+        // No stored session — show landing page immediately
+        setAuthChecked(true)
       }
+
       await fetchUsers()
       await fetchCoffeesShared()
     }
@@ -173,6 +188,7 @@ export default function HomePage() {
       if (session?.user) {
         setAuthUser(session.user as User)
         setShowAuth(false)
+        setAuthChecked(true)
         const p = await fetchProfile(session.user.id)
         if (!p) {
           setNeedsSetup(true)
