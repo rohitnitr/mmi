@@ -81,9 +81,14 @@ export default function HomePage() {
 
   const fetchUsers = useCallback(async () => {
     const c = sb(); if (!c) return
-    const since = new Date(Date.now() - 3 * 60 * 1000).toISOString()
-    const { data } = await c.from('users').select('*').gte('last_active', since).order('last_active', { ascending: false }).limit(100)
-    if (data) { setUsers(data); setOnlineCount(data.length) }
+    // Fetch all users ordered by last_active — used for peers list and non-auth preview
+    const { data } = await c.from('users').select('*').order('last_active', { ascending: false }).limit(100)
+    if (data) {
+      setUsers(data)
+      // Online count = active in last 3 minutes
+      const since = new Date(Date.now() - 3 * 60 * 1000).toISOString()
+      setOnlineCount(data.filter((u: UserProfile) => u.last_active && u.last_active >= since).length)
+    }
     setLoadingUsers(false)
   }, [sb])
 
@@ -337,25 +342,6 @@ export default function HomePage() {
               <div><span className="metric-value">{coffeesShared}</span><span className="metric-label">Coffee Shared</span></div>
             </div>
           </div>
-
-          {/* ─── Recently Active Users (non-auth landing) ─── */}
-          {!authUser && users.length > 0 && (
-            <div className="recent-users-strip">
-              <p className="recent-users-label">Recently Active</p>
-              <div className="recent-users-list">
-                {users.slice(0, 6).map(u => (
-                  <div key={u.id} className="recent-user-row">
-                    <div className="recent-user-avatar">{u.username.slice(0, 2).toUpperCase()}</div>
-                    <div className="recent-user-info">
-                      <span className="recent-user-name">{u.username}</span>
-                      <span className="recent-user-meta">{u.domain} · {u.experience}</span>
-                    </div>
-                    <span className="recent-user-time">{formatDistanceToNow(new Date(u.last_active || u.created_at || Date.now()), { addSuffix: true })}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </section>
 
         {/* ─── FIND PEERS TAB ─── */}
@@ -367,40 +353,50 @@ export default function HomePage() {
             </div>
             {loadingUsers ? (
               <div className="users-grid">{[...Array(6)].map((_, i) => <div key={i} className="user-card skeleton" />)}</div>
-            ) : sortedPeers.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-icon">☕</p>
-                <p className="empty-title">No one here yet</p>
-                <p className="empty-subtitle">Share the link — be the first coffee at the table.</p>
-                {!authUser && <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setShowAuth(true)}>Join Now →</button>}
-              </div>
             ) : (
-              <div className="users-grid">
-                {sortedPeers.map(user => (
-                  <div key={user.id} className="user-card">
-                    <div className="user-card-top">
-                      <div className="avatar md">{user.username.slice(0, 2).toUpperCase()}</div>
-                      <div className="online-dot" />
-                    </div>
-                    <div className="user-card-body">
-                      <h3 className="user-name">{user.username}</h3>
-                      <div className="user-tags">
-                        <span className="tag">{user.experience}</span>
-                        {user.domain && <span className="tag">{user.domain}</span>}
-                      </div>
-                      {user.target_role && <span className="user-role">🎯 {user.target_role}</span>}
-                      <span className="user-active">{formatDistanceToNow(new Date(user.last_active || user.created_at || Date.now()), { addSuffix: true })}</span>
-                      {profile && user._score >= 50 && <span className="match-badge">⚡ Great match</span>}
-                    </div>
-                    <button className="btn btn-primary btn-sm invite-btn" onClick={() => {
-                      if (!authUser || !profile) { setShowAuth(true); return }
-                      setInviteTarget(user)
-                    }}>
-                      ☕ Offer Coffee
-                    </button>
+              (() => {
+                // Non-auth: show top 6 most recently active users
+                // Auth: show match-scored peers (excluding self)
+                const displayUsers = !authUser
+                  ? users.slice(0, 6).map(u => ({ ...u, _score: 0 }))
+                  : sortedPeers
+
+                return displayUsers.length === 0 ? (
+                  <div className="empty-state">
+                    <p className="empty-icon">☕</p>
+                    <p className="empty-title">No one here yet</p>
+                    <p className="empty-subtitle">Share the link — be the first coffee at the table.</p>
+                    {!authUser && <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setShowAuth(true)}>Join Now →</button>}
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className="users-grid">
+                    {displayUsers.map(user => (
+                      <div key={user.id} className="user-card">
+                        <div className="user-card-top">
+                          <div className="avatar md">{user.username.slice(0, 2).toUpperCase()}</div>
+                          <div className="online-dot" />
+                        </div>
+                        <div className="user-card-body">
+                          <h3 className="user-name">{user.username}</h3>
+                          <div className="user-tags">
+                            <span className="tag">{user.experience}</span>
+                            {user.domain && <span className="tag">{user.domain}</span>}
+                          </div>
+                          {user.target_role && <span className="user-role">🎯 {user.target_role}</span>}
+                          <span className="user-active">{formatDistanceToNow(new Date(user.last_active || user.created_at || Date.now()), { addSuffix: true })}</span>
+                          {profile && user._score >= 50 && <span className="match-badge">⚡ Great match</span>}
+                        </div>
+                        <button className="btn btn-primary btn-sm invite-btn" onClick={() => {
+                          if (!authUser || !profile) { setShowAuth(true); return }
+                          setInviteTarget(user)
+                        }}>
+                          ☕ Offer Coffee
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()
             )}
           </section>
         )}
