@@ -71,6 +71,7 @@ export default function HomePage() {
   const [sentToIds, setSentToIds] = useState<Set<string>>(new Set())
   const [selectedChat, setSelectedChat] = useState<Session | null>(null)
   const [chatNotification, setChatNotification] = useState(false)  // new match badge
+  const [lastMsg, setLastMsg] = useState<{ text: string; unread: boolean } | null>(null)
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3500)
@@ -131,6 +132,18 @@ export default function HomePage() {
     const { data } = await c.from('invites').select('receiver_id')
       .eq('sender_id', uid).in('status', ['pending', 'accepted'])
     if (data) setSentToIds(new Set(data.map((i: any) => i.receiver_id)))
+  }, [sb])
+
+  const fetchLastMsg = useCallback(async (sessionId: string, currentlyOpen: boolean) => {
+    const c = sb(); if (!c) return
+    const { data } = await c.from('messages')
+      .select('content, sender_id')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    if (data?.[0]) {
+      setLastMsg({ text: data[0].content, unread: !currentlyOpen })
+    }
   }, [sb])
 
   const fetchUserCoffeesShared = useCallback(async (uid: string) => {
@@ -209,8 +222,15 @@ export default function HomePage() {
     const ch1 = c.channel('rt-users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => { fetchUsers(); fetchCoffeesShared() }).subscribe()
     const ch2 = c.channel('rt-invites').on('postgres_changes', { event: '*', schema: 'public', table: 'invites' }, () => { fetchInvites(authUser.id); fetchCoffeesShared() }).subscribe()
     const ch3 = c.channel('rt-sessions').on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => fetchSession(authUser.id)).subscribe()
+    const ch4 = c.channel('rt-messages').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
+      // When a new message arrives, update the DM card preview
+      if (activeSession && payload.new.session_id === activeSession.id) {
+        const isOpen = !!selectedChat
+        setLastMsg({ text: payload.new.content, unread: !isOpen })
+      }
+    }).subscribe()
     const hb = setInterval(() => pingActive(authUser.id), 30_000)
-    return () => { ch1.unsubscribe(); ch2.unsubscribe(); ch3.unsubscribe(); clearInterval(hb) }
+    return () => { ch1.unsubscribe(); ch2.unsubscribe(); ch3.unsubscribe(); ch4.unsubscribe(); clearInterval(hb) }
   }, [authUser, sb, fetchUsers, fetchCoffeesShared, fetchInvites, fetchSession, pingActive])
 
   // ── Metrics poll for non-auth ─────────────────────────────────────────────
@@ -249,6 +269,8 @@ export default function HomePage() {
       setActiveSession(session)
       setInvites(p => p.filter(i => i.id !== invite.id))
       setChatNotification(true)  // show badge on Chats tab
+      // Load last msg for preview (will show the note if one was sent)
+      setTimeout(() => fetchLastMsg(session.id, false), 800)
       showToast('Matched! 🎉 Open the Chats tab to start your session')
     } else showToast(data.error || 'Failed to accept', 'error')
   }
@@ -517,9 +539,11 @@ export default function HomePage() {
                   sessionId={selectedChat.id}
                   userId={authUser.id}
                   otherUsername={selectedChat.other_username || 'Peer'}
-                  onBack={() => setSelectedChat(null)}
+                  peerUserId={selectedChat.user1_id === authUser.id ? selectedChat.user2_id : selectedChat.user1_id}
+                  onBack={() => { setSelectedChat(null); setLastMsg(prev => prev ? { ...prev, unread: false } : null) }}
                   onEnd={() => {
                     setActiveSession(null); setSelectedChat(null)
+                    setLastMsg(null); setChatNotification(false)
                     if (authUser) fetchProfile(authUser.id)
                     showToast('Session ended 👋')
                   }}
@@ -532,14 +556,21 @@ export default function HomePage() {
                 {activeSession ? (
                   <div
                     className="dm-card"
-                    onClick={() => { setSelectedChat(activeSession); setChatNotification(false) }}
+                    onClick={() => { setSelectedChat(activeSession); setChatNotification(false); setLastMsg(prev => prev ? { ...prev, unread: false } : null) }}
                   >
-                    <div className="dm-avatar">{activeSession.other_username?.slice(0, 2).toUpperCase() || '??'}</div>
+                    <div style={{ position: 'relative' }}>
+                      <div className="dm-avatar">{activeSession.other_username?.slice(0, 2).toUpperCase() || '??'}</div>
+                      {(chatNotification || lastMsg?.unread) && (
+                        <span style={{ position: 'absolute', top: -2, right: -2, width: 12, height: 12, background: '#22c55e', borderRadius: '50%', border: '2px solid #fff' }} />
+                      )}
+                    </div>
                     <div className="dm-info">
                       <span className="dm-name">{activeSession.other_username}</span>
-                      <span className="dm-sub">Mock Interview Session · Tap to chat</span>
+                      <span className={`dm-sub${lastMsg?.unread ? ' dm-sub-unread' : ''}`}>
+                        {lastMsg ? lastMsg.text.slice(0, 48) + (lastMsg.text.length > 48 ? '…' : '') : 'Mock Interview Session · Tap to chat'}
+                      </span>
                     </div>
-                    {chatNotification && <span className="dm-badge">New</span>}
+                    {lastMsg?.unread && <span className="dm-badge">New</span>}
                     <span className="dm-arrow">›</span>
                   </div>
                 ) : (

@@ -8,6 +8,7 @@ interface InviteRow {
   receiver_id: string
   status: string
   expires_at: string
+  note?: string
 }
 
 export async function POST(req: NextRequest) {
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error: inviteError } = await db
       .from('invites')
-      .select('id, sender_id, receiver_id, status, expires_at')
+      .select('id, sender_id, receiver_id, status, expires_at, note')
       .eq('id', inviteId)
       .single()
 
@@ -54,6 +55,15 @@ export async function POST(req: NextRequest) {
 
     if (sessionError)
       return NextResponse.json({ error: 'Failed to create session' }, { status: 500 })
+
+    // If the sender included a note, insert it as the first message in the chat
+    if (invite.note?.trim()) {
+      await db.from('messages').insert({
+        session_id: sessionData.id,
+        sender_id: invite.sender_id,
+        content: invite.note.trim(),
+      })
+    }
 
     return NextResponse.json({ session: sessionData })
   } catch {

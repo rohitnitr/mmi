@@ -10,12 +10,21 @@ interface Message {
   created_at: string
 }
 
+interface PeerProfile {
+  id: string
+  username: string
+  experience: string
+  domain: string
+  target_role: string
+}
+
 interface ChatRoomProps {
   sessionId: string
   userId: string
+  peerUserId: string
   otherUsername: string
-  onBack: () => void   // go back to DM list
-  onEnd: () => void    // end session entirely
+  onBack: () => void
+  onEnd: () => void
 }
 
 function getSB() {
@@ -24,11 +33,13 @@ function getSB() {
   return createClient()
 }
 
-export default function ChatRoom({ sessionId, userId, otherUsername, onBack, onEnd }: ChatRoomProps) {
+export default function ChatRoom({ sessionId, userId, peerUserId, otherUsername, onBack, onEnd }: ChatRoomProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [ending, setEnding] = useState(false)
+  const [peerProfile, setPeerProfile] = useState<PeerProfile | null>(null)
+  const [showPeerProfile, setShowPeerProfile] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -36,6 +47,19 @@ export default function ChatRoom({ sessionId, userId, otherUsername, onBack, onE
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Load peer profile
+  useEffect(() => {
+    if (!peerUserId) return
+    const c = getSB(); if (!c) return
+    c.from('users')
+      .select('id, username, experience, domain, target_role')
+      .eq('id', peerUserId)
+      .maybeSingle()
+      .then(({ data }: { data: PeerProfile | null }) => {
+        if (data) setPeerProfile(data)
+      })
+  }, [peerUserId])
 
   // Load history + subscribe to realtime
   useEffect(() => {
@@ -51,7 +75,6 @@ export default function ChatRoom({ sessionId, userId, otherUsername, onBack, onE
     }
     loadHistory()
 
-    // Realtime subscription for live messages
     const channel = c.channel(`chat-${sessionId}`)
       .on('postgres_changes', {
         event: 'INSERT',
@@ -77,7 +100,6 @@ export default function ChatRoom({ sessionId, userId, otherUsername, onBack, onE
 
     const c = getSB(); if (!c) { setSending(false); return }
 
-    // Optimistic update
     const optimistic: Message = {
       id: `opt-${Date.now()}`,
       session_id: sessionId,
@@ -97,7 +119,6 @@ export default function ChatRoom({ sessionId, userId, otherUsername, onBack, onE
       setMessages(prev => prev.filter(m => m.id !== optimistic.id))
       setInput(text)
     } else if (data) {
-      // Replace optimistic with real
       setMessages(prev => prev.map(m => m.id === optimistic.id ? data : m))
     }
 
@@ -110,7 +131,7 @@ export default function ChatRoom({ sessionId, userId, otherUsername, onBack, onE
   }
 
   const handleEnd = async () => {
-    if (!confirm('End this session? You won\'t be able to continue chatting.')) return
+    if (!confirm("End this session? You won't be able to continue chatting.")) return
     setEnding(true)
     try {
       await fetch('/api/sessions/end', {
@@ -130,12 +151,45 @@ export default function ChatRoom({ sessionId, userId, otherUsername, onBack, onE
 
   return (
     <div className="inline-chat">
+      {/* Peer profile mini-card overlay */}
+      {showPeerProfile && peerProfile && (
+        <div className="peer-profile-overlay" onClick={() => setShowPeerProfile(false)}>
+          <div className="peer-profile-card" onClick={e => e.stopPropagation()}>
+            <button className="peer-profile-close" onClick={() => setShowPeerProfile(false)}>✕</button>
+            <div className="peer-profile-avatar-lg">{peerProfile.username.slice(0, 2).toUpperCase()}</div>
+            <h3 className="peer-profile-name">{peerProfile.username}</h3>
+            <div className="peer-profile-fields">
+              <div className="peer-profile-row">
+                <span className="pp-label">Experience</span>
+                <span className="pp-value">{peerProfile.experience || '—'}</span>
+              </div>
+              <div className="peer-profile-row">
+                <span className="pp-label">Domain</span>
+                <span className="pp-value">{peerProfile.domain || '—'}</span>
+              </div>
+              <div className="peer-profile-row">
+                <span className="pp-label">Target Role</span>
+                <span className="pp-value">{peerProfile.target_role || '—'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="chat-header">
         <button className="chat-back-btn" onClick={onBack} title="Back to chats">‹</button>
-        <div className="chat-peer-avatar">{otherUsername.slice(0, 2).toUpperCase()}</div>
+        <button
+          className="chat-peer-avatar-btn"
+          onClick={() => setShowPeerProfile(true)}
+          title="View profile"
+        >
+          {otherUsername.slice(0, 2).toUpperCase()}
+        </button>
         <div className="chat-header-info">
-          <span className="chat-peer-name">{otherUsername}</span>
+          <button className="chat-peer-name-btn" onClick={() => setShowPeerProfile(true)}>
+            {otherUsername}
+          </button>
           <span className="chat-peer-status"><span className="online-dot-sm" /> Mock Interview Session</span>
         </div>
         <button className="chat-end-btn" onClick={handleEnd} disabled={ending}>
@@ -156,7 +210,13 @@ export default function ChatRoom({ sessionId, userId, otherUsername, onBack, onE
           return (
             <div key={msg.id} className={`chat-bubble-row${isMe ? ' me' : ' them'}`}>
               {!isMe && (
-                <div className="chat-bubble-avatar">{otherUsername.slice(0, 2).toUpperCase()}</div>
+                <button
+                  className="chat-bubble-avatar clickable"
+                  onClick={() => setShowPeerProfile(true)}
+                  title="View profile"
+                >
+                  {otherUsername.slice(0, 2).toUpperCase()}
+                </button>
               )}
               <div className={`chat-bubble${isMe ? ' bubble-me' : ' bubble-them'}`}>
                 <span className="bubble-text">{msg.content}</span>
