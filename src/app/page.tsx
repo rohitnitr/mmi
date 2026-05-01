@@ -11,7 +11,7 @@ import ProfileModal from '@/components/ProfileModal'
 import PaymentModal from '@/components/PaymentModal'
 import InviteModal from '@/components/InviteModal'
 
-const VoiceRoom = lazyLoad(() => import('@/components/VoiceRoom'), { ssr: false })
+const ChatRoom = lazyLoad(() => import('@/components/ChatRoom'), { ssr: false })
 
 interface UserProfile {
   id: string; username: string; email?: string; experience: string; domain: string
@@ -44,7 +44,7 @@ function getSB() {
   return createClient()
 }
 
-type Tab = 'peers' | 'requests' | 'profile'
+type Tab = 'peers' | 'requests' | 'chats' | 'profile'
 
 export default function HomePage() {
   const sbRef = useRef<any>(null)
@@ -68,6 +68,7 @@ export default function HomePage() {
   const [sendingInvite, setSendingInvite] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [loadingUsers, setLoadingUsers] = useState(true)
+  const [sentToIds, setSentToIds] = useState<Set<string>>(new Set())
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3500)
@@ -121,6 +122,13 @@ export default function HomePage() {
     setCoffeesShared(count || 0)
   }, [sb])
 
+  const fetchSentInvites = useCallback(async (uid: string) => {
+    const c = sb(); if (!c) return
+    const { data } = await c.from('invites').select('receiver_id')
+      .eq('sender_id', uid).in('status', ['pending', 'accepted'])
+    if (data) setSentToIds(new Set(data.map((i: any) => i.receiver_id)))
+  }, [sb])
+
   const fetchUserCoffeesShared = useCallback(async (uid: string) => {
     const c = sb(); if (!c) return
     // Coffees this user has sent (accepted invites where they were sender)
@@ -139,9 +147,24 @@ export default function HomePage() {
     const client = getSB(); if (!client) return
     sbRef.current = client
 
-    // onAuthStateChange fires immediately with the current session (INITIAL_SESSION),
-    // then fires again on every login/logout. This is the single source of truth.
+    // Detect page refresh via Navigation API — on reload, sign out stale session.
+    const navType = typeof performance !== 'undefined'
+      ? (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type
+      : undefined
+    const isReload = navType === 'reload'
+    let ignoreFirst = isReload  // true = intercept & discard the INITIAL_SESSION event on reload
+
     const { data: { subscription } } = client.auth.onAuthStateChange(async (_e: string, session: any) => {
+      if (ignoreFirst) {
+        ignoreFirst = false
+        if (session?.user) {
+          // Stale session on reload — sign out and show landing page cleanly
+          await client.auth.signOut()
+          return  // SIGNED_OUT event will fire next and set authChecked
+        }
+        // No session on reload — fall through to show landing
+      }
+
       if (session?.user) {
         setAuthUser(session.user as User)
         setShowAuth(false)
@@ -153,17 +176,18 @@ export default function HomePage() {
           await fetchSession(session.user.id)
           await pingActive(session.user.id)
           await fetchUserCoffeesShared(session.user.id)
+          await fetchSentInvites(session.user.id)
         }
         await fetchUsers()
         await fetchCoffeesShared()
       } else {
         setAuthUser(null); setProfile(null); setNeedsSetup(false)
+        setSentToIds(new Set())
       }
-      // Always mark auth as resolved once we get any state (logged in or not)
       setAuthChecked(true)
     })
 
-    // Load public data (peers list, coffee count) immediately on mount
+    // Load public data immediately on mount
     fetchUsers()
     fetchCoffeesShared()
 
@@ -200,7 +224,7 @@ export default function HomePage() {
         body: JSON.stringify({ senderId: authUser.id, receiverId: inviteTarget.id, note }),
       })
       const data = await res.json()
-      if (res.ok) { showToast('Coffee offered! ☕'); await fetchProfile(authUser.id); setInviteTarget(null) }
+      if (res.ok) { showToast('Coffee offered! ☕'); await fetchProfile(authUser.id); if (inviteTarget) setSentToIds(prev => new Set(prev).add(inviteTarget.id)); setInviteTarget(null) }
       else showToast(data.error || 'Failed to send invite', 'error')
     } finally { setSendingInvite(false) }
   }
@@ -215,7 +239,7 @@ export default function HomePage() {
       const { data: ou } = await c.from('users').select('username').eq('id', oid).maybeSingle()
       setActiveSession({ ...data.session, other_username: ou?.username || 'Peer' })
       setInvites(p => p.filter(i => i.id !== invite.id))
-      showToast('Session started! 🎙️')
+      showToast('Chat started! 💬 Check Chats tab')
     } else showToast(data.error || 'Failed to accept', 'error')
   }
 
@@ -226,8 +250,11 @@ export default function HomePage() {
 
   const handleLogout = async () => {
     const c = sb(); if (c) await c.auth.signOut()
-    setShowProfile(false)
-    showToast('Signed out successfully')
+    // Clear all auth state immediately — don't wait for onAuthStateChange
+    setAuthUser(null); setProfile(null); setNeedsSetup(false)
+    setSentToIds(new Set()); setActiveSession(null)
+    setShowProfile(false); setActiveTab('peers')
+    showToast('Signed out')
   }
 
   const sortedPeers = users
@@ -255,9 +282,9 @@ export default function HomePage() {
       {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
 
       {activeSession && authUser && (
-        <VoiceRoom channelName={activeSession.channel_name} sessionId={activeSession.id}
+        <ChatRoom sessionId={activeSession.id}
           userId={authUser.id} otherUsername={activeSession.other_username || 'Peer'}
-          onEnd={() => { setActiveSession(null); if (authUser) fetchProfile(authUser.id); showToast('Great session! 👏') }} />
+          onEnd={() => { setActiveSession(null); if (authUser) fetchProfile(authUser.id); showToast('Session ended! 👋') }} />
       )}
 
       {showAuth && <OnboardingModal onClose={() => setShowAuth(false)} />}
@@ -320,6 +347,9 @@ export default function HomePage() {
             <button className={`tab-btn${activeTab === 'requests' ? ' active' : ''}`} onClick={() => setActiveTab('requests')}>
               🔔 Requests {pendingInviteCount > 0 && <span className="tab-badge">{pendingInviteCount}</span>}
             </button>
+            <button className={`tab-btn${activeTab === 'chats' ? ' active' : ''}`} onClick={() => setActiveTab('chats')}>
+              💬 Chats {activeSession && <span className="tab-badge">1</span>}
+            </button>
             <button className={`tab-btn${activeTab === 'profile' ? ' active' : ''}`} onClick={() => setActiveTab('profile')}>👤 Profile</button>
           </div>
         </div>
@@ -331,7 +361,7 @@ export default function HomePage() {
           <div className="container">
             <div className="hero-badge">🚀 Free Beta · Join Now</div>
             <h1 className="hero-title">Offer a Peer a Coffee<br /><span className="hero-accent">Practice Interviews Together</span></h1>
-            <p className="hero-subtitle">Anonymous voice-only mock sessions.<br className="hide-mobile" /> Show up. Practice. Get hired.</p>
+            <p className="hero-subtitle">Real mock interviews with real peers.<br className="hide-mobile" /> Match. Practice. Get hired.</p>
             <div className="hero-actions">
               <button className="btn btn-primary btn-lg" onClick={() => setShowAuth(true)}>Start Practicing ☕</button>
               <span className="hero-note">1 free coffee on signup · No card needed</span>
@@ -408,11 +438,14 @@ export default function HomePage() {
                           <span className="user-active">{formatDistanceToNow(new Date(user.last_active || user.created_at || Date.now()), { addSuffix: true })}</span>
                           {profile && user._score >= 50 && <span className="match-badge">⚡ Great match</span>}
                         </div>
-                        <button className="btn btn-primary btn-sm invite-btn" onClick={() => {
-                          if (!authUser || !profile) { setShowAuth(true); return }
-                          setInviteTarget(user)
-                        }}>
-                          ☕ Offer Coffee
+                        <button
+                          className={`btn btn-sm invite-btn${sentToIds.has(user.id) ? ' btn-sent' : ' btn-primary'}`}
+                          disabled={sentToIds.has(user.id)}
+                          onClick={() => {
+                            if (!authUser || !profile) { setShowAuth(true); return }
+                            if (!sentToIds.has(user.id)) setInviteTarget(user)
+                          }}>
+                          {sentToIds.has(user.id) ? '✓ Coffee Sent' : '☕ Offer Coffee'}
                         </button>
                       </div>
                     ))}
@@ -458,11 +491,37 @@ export default function HomePage() {
                       </div>
                     )}
                     <div className="invite-actions">
-                      <button className="btn btn-success btn-sm" onClick={() => handleAccept(invite)}>Accept 🎙️</button>
+                      <button className="btn btn-success btn-sm" onClick={() => handleAccept(invite)}>Accept ✅</button>
                       <button className="btn btn-ghost btn-sm" onClick={() => handleReject(invite)}>Decline</button>
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ─── CHATS TAB ─── */}
+        {authUser && activeTab === 'chats' && (
+          <section className="section">
+            <h2 className="section-title" style={{ marginBottom: 16 }}>💬 Chats</h2>
+            {activeSession ? (
+              <div className="chat-session-card" onClick={() => {}}>
+                <div className="avatar md">{activeSession.other_username?.slice(0, 2).toUpperCase() || '??'}</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 700, margin: 0 }}>{activeSession.other_username}</p>
+                  <p style={{ fontSize: 12, color: '#a1a1aa', margin: 0 }}>Active session · tap to open</p>
+                </div>
+                <button className="btn btn-primary btn-sm" onClick={() => {
+                  // Re-open ChatRoom by ensuring activeSession is set
+                  setActiveSession({...activeSession})
+                }}>Open Chat →</button>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <p className="empty-icon">💬</p>
+                <p className="empty-title">No active chats</p>
+                <p className="empty-subtitle">Accept a coffee invite to start a mock interview chat.</p>
               </div>
             )}
           </section>
@@ -520,7 +579,7 @@ export default function HomePage() {
               {[
                 { n: 1, t: 'Sign Up Free', d: 'Verify with email in seconds. Get 1 free coffee to start.' },
                 { n: 2, t: 'Offer a Coffee', d: 'Find a peer and offer them a coffee to practice together.' },
-                { n: 3, t: 'Practice Live', d: '15-min voice call. Take turns interviewing. Level up.' },
+                { n: 3, t: 'Practice Together', d: 'Chat with your match. Take turns as interviewer and candidate.' },
               ].map(s => (
                 <div key={s.n} className="step">
                   <div className="step-num">{s.n}</div>
@@ -543,6 +602,11 @@ export default function HomePage() {
             <span className="bnb-icon">🔔</span>
             {pendingInviteCount > 0 && <span className="bnb-badge">{pendingInviteCount}</span>}
             <span className="bnb-label">Requests</span>
+          </button>
+          <button className={`bottom-nav-btn${activeTab === 'chats' ? ' active' : ''}`} onClick={() => setActiveTab('chats')}>
+            <span className="bnb-icon">💬</span>
+            {activeSession && <span className="bnb-badge">1</span>}
+            <span className="bnb-label">Chats</span>
           </button>
           <button className={`bottom-nav-btn${activeTab === 'profile' ? ' active' : ''}`} onClick={() => setActiveTab('profile')}>
             <span className="bnb-icon">👤</span><span className="bnb-label">Profile</span>
