@@ -14,7 +14,8 @@ interface ChatRoomProps {
   sessionId: string
   userId: string
   otherUsername: string
-  onEnd: () => void
+  onBack: () => void   // go back to DM list
+  onEnd: () => void    // end session entirely
 }
 
 function getSB() {
@@ -23,14 +24,13 @@ function getSB() {
   return createClient()
 }
 
-export default function ChatRoom({ sessionId, userId, otherUsername, onEnd }: ChatRoomProps) {
+export default function ChatRoom({ sessionId, userId, otherUsername, onBack, onEnd }: ChatRoomProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [ending, setEnding] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const channelRef = useRef<any>(null)
 
   // Scroll to bottom whenever messages change
   useEffect(() => {
@@ -41,18 +41,17 @@ export default function ChatRoom({ sessionId, userId, otherUsername, onEnd }: Ch
   useEffect(() => {
     const c = getSB(); if (!c) return
 
-    // Load message history
     const loadHistory = async () => {
       const { data } = await c.from('messages')
         .select('*')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: true })
-        .limit(200)
+        .limit(500)
       if (data) setMessages(data)
     }
     loadHistory()
 
-    // Subscribe to new messages via Supabase Realtime
+    // Realtime subscription for live messages
     const channel = c.channel(`chat-${sessionId}`)
       .on('postgres_changes', {
         event: 'INSERT',
@@ -61,14 +60,12 @@ export default function ChatRoom({ sessionId, userId, otherUsername, onEnd }: Ch
         filter: `session_id=eq.${sessionId}`,
       }, (payload: any) => {
         setMessages(prev => {
-          // Avoid duplicates (optimistic update may have added it)
           if (prev.find(m => m.id === payload.new.id)) return prev
           return [...prev, payload.new as Message]
         })
       })
       .subscribe()
 
-    channelRef.current = channel
     return () => { channel.unsubscribe() }
   }, [sessionId])
 
@@ -90,17 +87,20 @@ export default function ChatRoom({ sessionId, userId, otherUsername, onEnd }: Ch
     }
     setMessages(prev => [...prev, optimistic])
 
-    const { error } = await c.from('messages').insert({
+    const { data, error } = await c.from('messages').insert({
       session_id: sessionId,
       sender_id: userId,
       content: text,
-    })
+    }).select().single()
 
     if (error) {
-      // Rollback optimistic on error
       setMessages(prev => prev.filter(m => m.id !== optimistic.id))
       setInput(text)
+    } else if (data) {
+      // Replace optimistic with real
+      setMessages(prev => prev.map(m => m.id === optimistic.id ? data : m))
     }
+
     setSending(false)
     inputRef.current?.focus()
   }, [input, sending, sessionId, userId])
@@ -110,6 +110,7 @@ export default function ChatRoom({ sessionId, userId, otherUsername, onEnd }: Ch
   }
 
   const handleEnd = async () => {
+    if (!confirm('End this session? You won\'t be able to continue chatting.')) return
     setEnding(true)
     try {
       await fetch('/api/sessions/end', {
@@ -122,76 +123,73 @@ export default function ChatRoom({ sessionId, userId, otherUsername, onEnd }: Ch
   }
 
   const formatTime = (iso: string) => {
-    const d = new Date(iso)
-    return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+    try {
+      return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+    } catch { return '' }
   }
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 9999 }}>
-      <div className="chat-room">
-        {/* Header */}
-        <div className="chat-room-header">
-          <div className="chat-room-header-left">
-            <div className="chat-peer-avatar">{otherUsername.slice(0, 2).toUpperCase()}</div>
-            <div>
-              <div className="chat-peer-name">{otherUsername}</div>
-              <div className="chat-peer-status">
-                <span className="online-dot-sm" />
-                Mock Interview Session
-              </div>
-            </div>
+    <div className="inline-chat">
+      {/* Header */}
+      <div className="chat-header">
+        <button className="chat-back-btn" onClick={onBack} title="Back to chats">‹</button>
+        <div className="chat-peer-avatar">{otherUsername.slice(0, 2).toUpperCase()}</div>
+        <div className="chat-header-info">
+          <span className="chat-peer-name">{otherUsername}</span>
+          <span className="chat-peer-status"><span className="online-dot-sm" /> Mock Interview Session</span>
+        </div>
+        <button className="chat-end-btn" onClick={handleEnd} disabled={ending}>
+          {ending ? '…' : 'End Session'}
+        </button>
+      </div>
+
+      {/* Messages */}
+      <div className="chat-messages">
+        {messages.length === 0 && (
+          <div className="chat-empty">
+            <span style={{ fontSize: 32 }}>☕</span>
+            <p>You matched! Say hello and begin your mock interview.</p>
           </div>
-          <button className="chat-end-btn" onClick={handleEnd} disabled={ending} title="End session">
-            {ending ? '...' : '✕ End'}
-          </button>
-        </div>
-
-        {/* Messages */}
-        <div className="chat-messages">
-          {messages.length === 0 && (
-            <div className="chat-empty">
-              <span style={{ fontSize: 28 }}>☕</span>
-              <p>Session started! Say hi and begin your mock interview.</p>
-            </div>
-          )}
-          {messages.map(msg => {
-            const isMe = msg.sender_id === userId
-            return (
-              <div key={msg.id} className={`chat-bubble-row${isMe ? ' me' : ' them'}`}>
-                {!isMe && (
-                  <div className="chat-bubble-avatar">{otherUsername.slice(0, 2).toUpperCase()}</div>
-                )}
-                <div className={`chat-bubble${isMe ? ' bubble-me' : ' bubble-them'}`}>
-                  <span className="bubble-text">{msg.content}</span>
-                  <span className="bubble-time">{formatTime(msg.created_at)}</span>
-                </div>
+        )}
+        {messages.map(msg => {
+          const isMe = msg.sender_id === userId
+          return (
+            <div key={msg.id} className={`chat-bubble-row${isMe ? ' me' : ' them'}`}>
+              {!isMe && (
+                <div className="chat-bubble-avatar">{otherUsername.slice(0, 2).toUpperCase()}</div>
+              )}
+              <div className={`chat-bubble${isMe ? ' bubble-me' : ' bubble-them'}`}>
+                <span className="bubble-text">{msg.content}</span>
+                <span className="bubble-time">{formatTime(msg.created_at)}</span>
               </div>
-            )
-          })}
-          <div ref={bottomRef} />
-        </div>
+            </div>
+          )
+        })}
+        <div ref={bottomRef} />
+      </div>
 
-        {/* Input */}
-        <div className="chat-input-bar">
-          <input
-            ref={inputRef}
-            className="chat-input"
-            type="text"
-            placeholder="Type a message… (Enter to send)"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            maxLength={1000}
-            autoFocus
-          />
-          <button
-            className="chat-send-btn"
-            onClick={sendMessage}
-            disabled={!input.trim() || sending}
-          >
-            {sending ? <span className="spinner sm" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,.3)', borderTopColor: '#fff' }} /> : '↑'}
-          </button>
-        </div>
+      {/* Input */}
+      <div className="chat-input-bar">
+        <input
+          ref={inputRef}
+          className="chat-input"
+          type="text"
+          placeholder="Type a message… (Enter to send)"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          maxLength={1000}
+          autoFocus
+        />
+        <button
+          className="chat-send-btn"
+          onClick={sendMessage}
+          disabled={!input.trim() || sending}
+        >
+          {sending
+            ? <span className="spinner sm" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,.3)', borderTopColor: '#fff' }} />
+            : '↑'}
+        </button>
       </div>
     </div>
   )

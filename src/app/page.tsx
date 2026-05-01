@@ -69,6 +69,8 @@ export default function HomePage() {
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [sentToIds, setSentToIds] = useState<Set<string>>(new Set())
+  const [selectedChat, setSelectedChat] = useState<Session | null>(null)
+  const [chatNotification, setChatNotification] = useState(false)  // new match badge
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3500)
@@ -116,11 +118,13 @@ export default function HomePage() {
   }, [sb])
 
   const fetchCoffeesShared = useCallback(async () => {
-    const c = sb(); if (!c) return
-    // Global total = all invites ever sent (any status) — shown on landing page
-    const { count } = await c.from('invites').select('*', { count: 'exact', head: true })
-    setCoffeesShared(count || 0)
-  }, [sb])
+    // Use /api/stats which uses service role key — bypasses RLS so
+    // non-authenticated users can see the total invite count.
+    try {
+      const res = await fetch('/api/stats')
+      if (res.ok) { const { count } = await res.json(); setCoffeesShared(count || 0) }
+    } catch {}
+  }, [])
 
   const fetchSentInvites = useCallback(async (uid: string) => {
     const c = sb(); if (!c) return
@@ -158,9 +162,13 @@ export default function HomePage() {
       if (ignoreFirst) {
         ignoreFirst = false
         if (session?.user) {
-          // Stale session on reload — sign out and show landing page cleanly
-          await client.auth.signOut()
-          return  // SIGNED_OUT event will fire next and set authChecked
+          // Stale session on reload — clear UI state IMMEDIATELY (no await),
+          // fire signOut in background to clean up token server-side.
+          setAuthUser(null); setProfile(null); setNeedsSetup(false)
+          setSentToIds(new Set()); setActiveSession(null); setSelectedChat(null); setChatNotification(false)
+          setAuthChecked(true)
+          client.auth.signOut()  // fire-and-forget, don't await
+          return
         }
         // No session on reload — fall through to show landing
       }
@@ -237,9 +245,11 @@ export default function HomePage() {
       const c = sb()
       const oid = data.session.user1_id === authUser.id ? data.session.user2_id : data.session.user1_id
       const { data: ou } = await c.from('users').select('username').eq('id', oid).maybeSingle()
-      setActiveSession({ ...data.session, other_username: ou?.username || 'Peer' })
+      const session = { ...data.session, other_username: ou?.username || 'Peer' }
+      setActiveSession(session)
       setInvites(p => p.filter(i => i.id !== invite.id))
-      showToast('Chat started! 💬 Check Chats tab')
+      setChatNotification(true)  // show badge on Chats tab
+      showToast('Matched! 🎉 Open the Chats tab to start your session')
     } else showToast(data.error || 'Failed to accept', 'error')
   }
 
@@ -252,7 +262,7 @@ export default function HomePage() {
     const c = sb(); if (c) await c.auth.signOut()
     // Clear all auth state immediately — don't wait for onAuthStateChange
     setAuthUser(null); setProfile(null); setNeedsSetup(false)
-    setSentToIds(new Set()); setActiveSession(null)
+    setSentToIds(new Set()); setActiveSession(null); setSelectedChat(null); setChatNotification(false)
     setShowProfile(false); setActiveTab('peers')
     showToast('Signed out')
   }
@@ -281,11 +291,7 @@ export default function HomePage() {
     <div className="app">
       {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
 
-      {activeSession && authUser && (
-        <ChatRoom sessionId={activeSession.id}
-          userId={authUser.id} otherUsername={activeSession.other_username || 'Peer'}
-          onEnd={() => { setActiveSession(null); if (authUser) fetchProfile(authUser.id); showToast('Session ended! 👋') }} />
-      )}
+      {/* ChatRoom is now inline in the Chats tab — no popup */}
 
       {showAuth && <OnboardingModal onClose={() => setShowAuth(false)} />}
 
@@ -347,8 +353,8 @@ export default function HomePage() {
             <button className={`tab-btn${activeTab === 'requests' ? ' active' : ''}`} onClick={() => setActiveTab('requests')}>
               🔔 Requests {pendingInviteCount > 0 && <span className="tab-badge">{pendingInviteCount}</span>}
             </button>
-            <button className={`tab-btn${activeTab === 'chats' ? ' active' : ''}`} onClick={() => setActiveTab('chats')}>
-              💬 Chats {activeSession && <span className="tab-badge">1</span>}
+            <button className={`tab-btn${activeTab === 'chats' ? ' active' : ''}`} onClick={() => { setActiveTab('chats'); setChatNotification(false) }}>
+              💬 Chats {chatNotification && <span className="tab-badge">●</span>}
             </button>
             <button className={`tab-btn${activeTab === 'profile' ? ' active' : ''}`} onClick={() => setActiveTab('profile')}>👤 Profile</button>
           </div>
@@ -504,24 +510,45 @@ export default function HomePage() {
         {/* ─── CHATS TAB ─── */}
         {authUser && activeTab === 'chats' && (
           <section className="section">
-            <h2 className="section-title" style={{ marginBottom: 16 }}>💬 Chats</h2>
-            {activeSession ? (
-              <div className="chat-session-card" onClick={() => {}}>
-                <div className="avatar md">{activeSession.other_username?.slice(0, 2).toUpperCase() || '??'}</div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 700, margin: 0 }}>{activeSession.other_username}</p>
-                  <p style={{ fontSize: 12, color: '#a1a1aa', margin: 0 }}>Active session · tap to open</p>
-                </div>
-                <button className="btn btn-primary btn-sm" onClick={() => {
-                  // Re-open ChatRoom by ensuring activeSession is set
-                  setActiveSession({...activeSession})
-                }}>Open Chat →</button>
+            {selectedChat ? (
+              // ── Inline ChatRoom (social-media style, no modal) ──
+              <div className="inline-chat-wrap">
+                <ChatRoom
+                  sessionId={selectedChat.id}
+                  userId={authUser.id}
+                  otherUsername={selectedChat.other_username || 'Peer'}
+                  onBack={() => setSelectedChat(null)}
+                  onEnd={() => {
+                    setActiveSession(null); setSelectedChat(null)
+                    if (authUser) fetchProfile(authUser.id)
+                    showToast('Session ended 👋')
+                  }}
+                />
               </div>
             ) : (
-              <div className="empty-state">
-                <p className="empty-icon">💬</p>
-                <p className="empty-title">No active chats</p>
-                <p className="empty-subtitle">Accept a coffee invite to start a mock interview chat.</p>
+              // ── Session list (like DMs list) ──
+              <div>
+                <h2 className="section-title" style={{ marginBottom: 16 }}>💬 Chats</h2>
+                {activeSession ? (
+                  <div
+                    className="dm-card"
+                    onClick={() => { setSelectedChat(activeSession); setChatNotification(false) }}
+                  >
+                    <div className="dm-avatar">{activeSession.other_username?.slice(0, 2).toUpperCase() || '??'}</div>
+                    <div className="dm-info">
+                      <span className="dm-name">{activeSession.other_username}</span>
+                      <span className="dm-sub">Mock Interview Session · Tap to chat</span>
+                    </div>
+                    {chatNotification && <span className="dm-badge">New</span>}
+                    <span className="dm-arrow">›</span>
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <p className="empty-icon">💬</p>
+                    <p className="empty-title">No chats yet</p>
+                    <p className="empty-subtitle">Accept a coffee invite to start a mock interview session.</p>
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -603,9 +630,9 @@ export default function HomePage() {
             {pendingInviteCount > 0 && <span className="bnb-badge">{pendingInviteCount}</span>}
             <span className="bnb-label">Requests</span>
           </button>
-          <button className={`bottom-nav-btn${activeTab === 'chats' ? ' active' : ''}`} onClick={() => setActiveTab('chats')}>
+          <button className={`bottom-nav-btn${activeTab === 'chats' ? ' active' : ''}`} onClick={() => { setActiveTab('chats'); setChatNotification(false) }}>
             <span className="bnb-icon">💬</span>
-            {activeSession && <span className="bnb-badge">1</span>}
+            {chatNotification && <span className="bnb-badge">●</span>}
             <span className="bnb-label">Chats</span>
           </button>
           <button className={`bottom-nav-btn${activeTab === 'profile' ? ' active' : ''}`} onClick={() => setActiveTab('profile')}>
