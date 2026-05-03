@@ -184,27 +184,39 @@ export default function HomePage() {
     const client = getClient(); if (!client) return
 
     const { data: { subscription } } = client.auth.onAuthStateChange(async (_e: string, session: any) => {
-      if (session?.user) {
-        setAuthUser(session.user as User)
-        setShowAuth(false)
-        const p = await fetchProfile(session.user.id)
-        if (!p) {
-          setNeedsSetup(true)
+      try {
+        if (session?.user) {
+          setAuthUser(session.user as User)
+          setShowAuth(false)
+          const p = await fetchProfile(session.user.id)
+          if (!p) {
+            setNeedsSetup(true)
+          } else {
+            await Promise.all([
+              fetchInvites(session.user.id),
+              fetchSession(session.user.id),
+              pingActive(session.user.id),
+              fetchUserCoffeesShared(session.user.id),
+              fetchSentInvites(session.user.id),
+              fetchUsers(),
+              fetchCoffeesShared()
+            ])
+          }
         } else {
-          await fetchInvites(session.user.id)
-          await fetchSession(session.user.id)
-          await pingActive(session.user.id)
-          await fetchUserCoffeesShared(session.user.id)
-          await fetchSentInvites(session.user.id)
+          setAuthUser(null); setProfile(null); setNeedsSetup(false)
+          setSentToIds(new Set()); setSessions([]); setSelectedChat(null)
+          setUnreadMap({}); setLastMsgMap({})
         }
-        await fetchUsers()
-        await fetchCoffeesShared()
-      } else {
-        setAuthUser(null); setProfile(null); setNeedsSetup(false)
-        setSentToIds(new Set()); setSessions([]); setSelectedChat(null)
-        setUnreadMap({}); setLastMsgMap({})
+      } catch (err) {
+        console.error('[Boot error]', err)
+      } finally {
+        setAuthChecked(true)
       }
-      setAuthChecked(true)
+    })
+
+    // Fallback: forcefully resolve auth check if event doesn't fire
+    client.auth.getSession().then(({ data, error }) => {
+      if (error || !data.session) setAuthChecked(true)
     })
 
     // Load public data immediately on mount
@@ -219,7 +231,11 @@ export default function HomePage() {
   useEffect(() => {
     const c = sb(); if (!c || !authUser) return
     const ch1 = c.channel('rt-users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => { fetchUsers(); fetchCoffeesShared() }).subscribe()
-    const ch2 = c.channel('rt-invites').on('postgres_changes', { event: '*', schema: 'public', table: 'invites' }, () => { fetchInvites(authUser.id); fetchCoffeesShared() }).subscribe()
+    const ch2 = c.channel('rt-invites').on('postgres_changes', { event: '*', schema: 'public', table: 'invites' }, () => { 
+      fetchInvites(authUser.id); 
+      fetchCoffeesShared();
+      fetchSession(authUser.id); // Catch accepted invites for sender
+    }).subscribe()
     const ch3 = c.channel('rt-sessions').on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => fetchSession(authUser.id)).subscribe()
     const ch4 = c.channel('rt-messages').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
       const sid = payload.new.session_id
