@@ -24,7 +24,7 @@ interface Invite {
 }
 interface Session {
   id: string; user1_id: string; user2_id: string; channel_name: string
-  status: string; other_username?: string
+  status: string; start_time: string; end_time?: string; other_username?: string
 }
 
 const EXP_RANK: Record<string, number> = { 'Fresher': 0, '0–2 yrs': 1, '2–5 yrs': 2, '5+ yrs': 3 }
@@ -115,7 +115,7 @@ export default function HomePage() {
     const { data } = await c.from('sessions').select('*')
       .or(`user1_id.eq.${uid},user2_id.eq.${uid}`)
       .eq('status', 'active')
-      .order('created_at', { ascending: false })
+      .order('start_time', { ascending: false })
     if (data?.length) {
       const enriched = await Promise.all(data.map(async (s: Session) => {
         const oid = s.user1_id === uid ? s.user2_id : s.user1_id
@@ -215,7 +215,15 @@ export default function HomePage() {
     })
 
     // Fallback: forcefully resolve auth check
-    client.auth.getSession().finally(() => setAuthChecked(true))
+    const authTimeout = setTimeout(() => {
+      console.warn('[Boot] Auth check timed out. Forcing UI unlock.')
+      setAuthChecked(true)
+    }, 2500)
+
+    client.auth.getSession().finally(() => {
+      clearTimeout(authTimeout)
+      setAuthChecked(true)
+    })
 
     // Load public data immediately on mount
     fetchUsers()
