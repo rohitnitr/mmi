@@ -1,7 +1,8 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { getClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import { formatDistanceToNow } from 'date-fns'
 import lazyLoad from 'next/dynamic'
@@ -38,17 +39,10 @@ function matchScore(me: UserProfile, other: UserProfile) {
   return s
 }
 
-function getSB() {
-  if (typeof window === 'undefined') return null
-  const { createClient } = require('@/lib/supabase/client')
-  return createClient()
-}
-
 type Tab = 'peers' | 'requests' | 'chats' | 'profile'
 
 export default function HomePage() {
-  const sbRef = useRef<any>(null)
-  const sb = useCallback(() => { if (!sbRef.current) sbRef.current = getSB(); return sbRef.current }, [])
+  const sb = useCallback(() => getClient(), [])
 
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -187,8 +181,7 @@ export default function HomePage() {
 
   // ── Boot ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const client = getSB(); if (!client) return
-    sbRef.current = client
+    const client = getClient(); if (!client) return
 
     const { data: { subscription } } = client.auth.onAuthStateChange(async (_e: string, session: any) => {
       if (session?.user) {
@@ -270,7 +263,7 @@ export default function HomePage() {
     const res = await fetch('/api/invites/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ inviteId: invite.id, userId: authUser.id }) })
     const data = await res.json()
     if (res.ok && data.session) {
-      const c = sb()
+      const c = sb(); if (!c) return
       const oid = data.session.user1_id === authUser.id ? data.session.user2_id : data.session.user1_id
       const { data: ou } = await c.from('users').select('username').eq('id', oid).maybeSingle()
       const session = { ...data.session, other_username: ou?.username || 'Peer' }

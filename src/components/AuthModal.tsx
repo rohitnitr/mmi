@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { getClient } from '@/lib/supabase/client'
 
 interface AuthModalProps {
   onClose: () => void
@@ -8,11 +9,7 @@ interface AuthModalProps {
 
 const EXPERIENCE_OPTIONS = ['0-2 yrs', '2-5 yrs', '5-8 yrs', '8+ yrs']
 
-function getClient() {
-  if (typeof window === 'undefined') return null
-  const { createClient } = require('@/lib/supabase/client')
-  return createClient()
-}
+  // getClient imported above
 
 export default function AuthModal({ onClose }: AuthModalProps) {
   const [mode, setMode] = useState<'choice' | 'email'>('choice')
@@ -35,7 +32,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     setLoading(true)
     setError('')
     try {
-      const client = getClient()
+      const client = getClient(); if (!client) return
       const { data, error: authError } = await client.auth.signInAnonymously()
       if (authError) throw authError
       if (data.user) await createProfile(data.user.id)
@@ -52,7 +49,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     setLoading(true)
     setError('')
     try {
-      const client = getClient()
+      const client = getClient(); if (!client) return
       const { error: authError } = await client.auth.signInWithOtp({ email })
       if (authError) throw authError
       setOtpSent(true)
@@ -68,7 +65,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     setLoading(true)
     setError('')
     try {
-      const client = getClient()
+      const client = getClient(); if (!client) return
       const { data, error: authError } = await client.auth.verifyOtp({
         email, token: otp, type: 'email',
       })

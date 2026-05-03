@@ -3,11 +3,7 @@ import { useState } from 'react'
 
 interface Props { onClose: () => void }
 
-function getClient() {
-  if (typeof window === 'undefined') return null
-  const { createClient } = require('@/lib/supabase/client')
-  return createClient()
-}
+import { getClient } from '@/lib/supabase/client'
 
 export default function OnboardingModal({ onClose }: Props) {
   const [loading, setLoading] = useState(false)

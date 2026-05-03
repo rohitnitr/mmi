@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import { getClient } from '@/lib/supabase/client'
 
 interface Message {
   id: string
@@ -27,12 +28,6 @@ interface ChatRoomProps {
   onEnd: () => void
 }
 
-function getSB() {
-  if (typeof window === 'undefined') return null
-  const { createClient } = require('@/lib/supabase/client')
-  return createClient()
-}
-
 export default function ChatRoom({ sessionId, userId, peerUserId, otherUsername, onBack, onEnd }: ChatRoomProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -51,7 +46,7 @@ export default function ChatRoom({ sessionId, userId, peerUserId, otherUsername,
   // Load peer profile
   useEffect(() => {
     if (!peerUserId) return
-    const c = getSB(); if (!c) return
+    const c = getClient(); if (!c) return
     c.from('users')
       .select('id, username, experience, domain, target_role')
       .eq('id', peerUserId)
@@ -63,7 +58,7 @@ export default function ChatRoom({ sessionId, userId, peerUserId, otherUsername,
 
   // Load history + subscribe to realtime
   useEffect(() => {
-    const c = getSB(); if (!c) return
+    const c = getClient(); if (!c) return
 
     const loadHistory = async () => {
       const { data } = await c.from('messages')
@@ -98,7 +93,7 @@ export default function ChatRoom({ sessionId, userId, peerUserId, otherUsername,
     setSending(true)
     setInput('')
 
-    const c = getSB(); if (!c) { setSending(false); return }
+    const c = getClient(); if (!c) { setSending(false); return }
 
     const optimistic: Message = {
       id: `opt-${Date.now()}`,
