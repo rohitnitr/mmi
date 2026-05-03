@@ -56,10 +56,10 @@ export default function HomePage() {
   const [needsSetup, setNeedsSetup] = useState(false)
   const [users, setUsers] = useState<UserProfile[]>([])
   const [invites, setInvites] = useState<Invite[]>([])
-  const [activeSession, setActiveSession] = useState<Session | null>(null)
+  const [sessions, setSessions] = useState<Session[]>([])  // ALL active sessions
   const [onlineCount, setOnlineCount] = useState(0)
-  const [coffeesShared, setCoffeesShared] = useState(0)        // global total
-  const [userCoffeesShared, setUserCoffeesShared] = useState(0) // current user's sent coffees
+  const [coffeesShared, setCoffeesShared] = useState(0)
+  const [userCoffeesShared, setUserCoffeesShared] = useState(0)
   const [activeTab, setActiveTab] = useState<Tab>('peers')
   const [showAuth, setShowAuth] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
@@ -70,8 +70,18 @@ export default function HomePage() {
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [sentToIds, setSentToIds] = useState<Set<string>>(new Set())
   const [selectedChat, setSelectedChat] = useState<Session | null>(null)
-  const [chatNotification, setChatNotification] = useState(false)  // new match badge
-  const [lastMsg, setLastMsg] = useState<{ text: string; unread: boolean } | null>(null)
+  const [unreadMap, setUnreadMap] = useState<Record<string, boolean>>({})   // sessionId -> has unread
+  const [lastMsgMap, setLastMsgMap] = useState<Record<string, string>>({}) // sessionId -> preview text
+  // filter + pagination
+  const [filterDomain, setFilterDomain] = useState('')
+  const [filterExp, setFilterExp] = useState('')
+  const [filterRole, setFilterRole] = useState('')
+  const [peersPage, setPeersPage] = useState(1)
+  const PEERS_PER_PAGE = 12
+  // feedback
+  const [showFeedback, setShowFeedback] = useState(false)
+  const [feedbackText, setFeedbackText] = useState('')
+  const [feedbackSent, setFeedbackSent] = useState(false)
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3500)
@@ -109,13 +119,28 @@ export default function HomePage() {
   const fetchSession = useCallback(async (uid: string) => {
     const c = sb(); if (!c) return
     const { data } = await c.from('sessions').select('*')
-      .or(`user1_id.eq.${uid},user2_id.eq.${uid}`).eq('status', 'active').limit(1)
+      .or(`user1_id.eq.${uid},user2_id.eq.${uid}`)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
     if (data?.length) {
-      const s = data[0]
-      const oid = s.user1_id === uid ? s.user2_id : s.user1_id
-      const { data: ou } = await c.from('users').select('username').eq('id', oid).maybeSingle()
-      setActiveSession({ ...s, other_username: ou?.username || 'Peer' })
-    } else setActiveSession(null)
+      const enriched = await Promise.all(data.map(async (s: Session) => {
+        const oid = s.user1_id === uid ? s.user2_id : s.user1_id
+        const { data: ou } = await c.from('users').select('username').eq('id', oid).maybeSingle()
+        return { ...s, other_username: ou?.username || 'Peer' }
+      }))
+      setSessions(enriched)
+      // Load last message preview for each session
+      enriched.forEach((s: Session) => {
+        c.from('messages')
+          .select('content')
+          .eq('session_id', s.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .then(({ data: md }: { data: { content: string }[] | null }) => {
+            if (md?.[0]) setLastMsgMap(prev => ({ ...prev, [s.id]: md[0].content }))
+          })
+      })
+    } else setSessions([])
   }, [sb])
 
   const fetchCoffeesShared = useCallback(async () => {
@@ -134,15 +159,16 @@ export default function HomePage() {
     if (data) setSentToIds(new Set(data.map((i: any) => i.receiver_id)))
   }, [sb])
 
-  const fetchLastMsg = useCallback(async (sessionId: string, currentlyOpen: boolean) => {
+  const fetchLastMsgForSession = useCallback(async (sessionId: string, isOpen: boolean) => {
     const c = sb(); if (!c) return
     const { data } = await c.from('messages')
-      .select('content, sender_id')
+      .select('content')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: false })
       .limit(1)
     if (data?.[0]) {
-      setLastMsg({ text: data[0].content, unread: !currentlyOpen })
+      setLastMsgMap(prev => ({ ...prev, [sessionId]: data[0].content }))
+      if (!isOpen) setUnreadMap(prev => ({ ...prev, [sessionId]: true }))
     }
   }, [sb])
 
@@ -164,28 +190,7 @@ export default function HomePage() {
     const client = getSB(); if (!client) return
     sbRef.current = client
 
-    // Detect page refresh via Navigation API — on reload, sign out stale session.
-    const navType = typeof performance !== 'undefined'
-      ? (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type
-      : undefined
-    const isReload = navType === 'reload'
-    let ignoreFirst = isReload  // true = intercept & discard the INITIAL_SESSION event on reload
-
     const { data: { subscription } } = client.auth.onAuthStateChange(async (_e: string, session: any) => {
-      if (ignoreFirst) {
-        ignoreFirst = false
-        if (session?.user) {
-          // Stale session on reload — clear UI state IMMEDIATELY (no await),
-          // fire signOut in background to clean up token server-side.
-          setAuthUser(null); setProfile(null); setNeedsSetup(false)
-          setSentToIds(new Set()); setActiveSession(null); setSelectedChat(null); setChatNotification(false)
-          setAuthChecked(true)
-          client.auth.signOut()  // fire-and-forget, don't await
-          return
-        }
-        // No session on reload — fall through to show landing
-      }
-
       if (session?.user) {
         setAuthUser(session.user as User)
         setShowAuth(false)
@@ -203,7 +208,8 @@ export default function HomePage() {
         await fetchCoffeesShared()
       } else {
         setAuthUser(null); setProfile(null); setNeedsSetup(false)
-        setSentToIds(new Set())
+        setSentToIds(new Set()); setSessions([]); setSelectedChat(null)
+        setUnreadMap({}); setLastMsgMap({})
       }
       setAuthChecked(true)
     })
@@ -223,11 +229,13 @@ export default function HomePage() {
     const ch2 = c.channel('rt-invites').on('postgres_changes', { event: '*', schema: 'public', table: 'invites' }, () => { fetchInvites(authUser.id); fetchCoffeesShared() }).subscribe()
     const ch3 = c.channel('rt-sessions').on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => fetchSession(authUser.id)).subscribe()
     const ch4 = c.channel('rt-messages').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
-      // When a new message arrives, update the DM card preview
-      if (activeSession && payload.new.session_id === activeSession.id) {
-        const isOpen = !!selectedChat
-        setLastMsg({ text: payload.new.content, unread: !isOpen })
-      }
+      const sid = payload.new.session_id
+      setLastMsgMap(prev => ({ ...prev, [sid]: payload.new.content }))
+      // Mark unread only if this chat is not currently open
+      setSelectedChat(cur => {
+        if (!cur || cur.id !== sid) setUnreadMap(prev => ({ ...prev, [sid]: true }))
+        return cur
+      })
     }).subscribe()
     const hb = setInterval(() => pingActive(authUser.id), 30_000)
     return () => { ch1.unsubscribe(); ch2.unsubscribe(); ch3.unsubscribe(); ch4.unsubscribe(); clearInterval(hb) }
@@ -266,11 +274,10 @@ export default function HomePage() {
       const oid = data.session.user1_id === authUser.id ? data.session.user2_id : data.session.user1_id
       const { data: ou } = await c.from('users').select('username').eq('id', oid).maybeSingle()
       const session = { ...data.session, other_username: ou?.username || 'Peer' }
-      setActiveSession(session)
+      setSessions(prev => [session, ...prev.filter(s => s.id !== session.id)])
       setInvites(p => p.filter(i => i.id !== invite.id))
-      setChatNotification(true)  // show badge on Chats tab
-      // Load last msg for preview (will show the note if one was sent)
-      setTimeout(() => fetchLastMsg(session.id, false), 800)
+      setUnreadMap(prev => ({ ...prev, [session.id]: true }))
+      setTimeout(() => fetchLastMsgForSession(session.id, false), 800)
       showToast('Matched! 🎉 Open the Chats tab to start your session')
     } else showToast(data.error || 'Failed to accept', 'error')
   }
@@ -282,9 +289,8 @@ export default function HomePage() {
 
   const handleLogout = async () => {
     const c = sb(); if (c) await c.auth.signOut()
-    // Clear all auth state immediately — don't wait for onAuthStateChange
     setAuthUser(null); setProfile(null); setNeedsSetup(false)
-    setSentToIds(new Set()); setActiveSession(null); setSelectedChat(null); setChatNotification(false)
+    setSentToIds(new Set()); setSessions([]); setSelectedChat(null); setUnreadMap({}); setLastMsgMap({})
     setShowProfile(false); setActiveTab('peers')
     showToast('Signed out')
   }
@@ -294,7 +300,31 @@ export default function HomePage() {
     .map(u => ({ ...u, _score: profile ? matchScore(profile, u) : 0 }))
     .sort((a, b) => b._score - a._score)
 
+  // Filter peers
+  const DOMAIN_OPTIONS = ['Software / IT','Data / Analytics','Finance','Marketing','HR','Core Engineering','Government Exams','Other']
+  const EXP_OPTIONS = ['Fresher','0–2 yrs','2–5 yrs','5+ yrs']
+  const filteredPeers = sortedPeers.filter(u => {
+    if (filterDomain && u.domain !== filterDomain) return false
+    if (filterExp && u.experience !== filterExp) return false
+    if (filterRole && !u.target_role?.toLowerCase().includes(filterRole.toLowerCase())) return false
+    return true
+  })
+  const totalPages = Math.max(1, Math.ceil(filteredPeers.length / PEERS_PER_PAGE))
+  const pagedPeers = filteredPeers.slice((peersPage - 1) * PEERS_PER_PAGE, peersPage * PEERS_PER_PAGE)
+
   const pendingInviteCount = invites.length
+  const totalUnread = Object.values(unreadMap).filter(Boolean).length
+
+  // ── Browser tab title notification ───────────────────────────────────────
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (totalUnread > 0 && activeTab !== 'chats') {
+      document.title = `(${totalUnread}) New message – MatchMyInterview`
+    } else {
+      document.title = 'MatchMyInterview – Practice Interviews with Real Peers'
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalUnread, activeTab])
 
   // ── RENDER ────────────────────────────────────────────────────────────────
 
@@ -348,10 +378,10 @@ export default function HomePage() {
       {/* ─── HEADER ─── */}
       <header className="header">
         <div className="header-inner container">
-          <div className="logo">
-            <span className="logo-icon">☕</span>
+          <a href="/" className="logo" style={{ textDecoration: 'none' }}>
+            <img src="/logo.svg" alt="MatchMyInterview logo" className="logo-img" />
             <span className="logo-text">MatchMyInterview</span>
-          </div>
+          </a>
           <div className="header-right">
             {profile ? (
               <>
@@ -375,8 +405,8 @@ export default function HomePage() {
             <button className={`tab-btn${activeTab === 'requests' ? ' active' : ''}`} onClick={() => setActiveTab('requests')}>
               🔔 Requests {pendingInviteCount > 0 && <span className="tab-badge">{pendingInviteCount}</span>}
             </button>
-            <button className={`tab-btn${activeTab === 'chats' ? ' active' : ''}`} onClick={() => { setActiveTab('chats'); setChatNotification(false) }}>
-              💬 Chats {chatNotification && <span className="tab-badge">●</span>}
+            <button className={`tab-btn${activeTab === 'chats' ? ' active' : ''}`} onClick={() => setActiveTab('chats')}>
+              💬 Chats {totalUnread > 0 && <span className="tab-badge">{totalUnread}</span>}
             </button>
             <button className={`tab-btn${activeTab === 'profile' ? ' active' : ''}`} onClick={() => setActiveTab('profile')}>👤 Profile</button>
           </div>
@@ -431,24 +461,41 @@ export default function HomePage() {
               <h2 className="section-title">Available to Practice</h2>
               {!authUser && <button className="btn btn-ghost btn-sm" onClick={() => setShowAuth(true)}>Join →</button>}
             </div>
+
+            {/* ── Filters (auth only) ── */}
+            {authUser && (
+              <div className="filter-bar">
+                <select className="filter-select" value={filterDomain} onChange={e => { setFilterDomain(e.target.value); setPeersPage(1) }}>
+                  <option value="">All Domains</option>
+                  {DOMAIN_OPTIONS.map(d => <option key={d}>{d}</option>)}
+                </select>
+                <select className="filter-select" value={filterExp} onChange={e => { setFilterExp(e.target.value); setPeersPage(1) }}>
+                  <option value="">All Experience</option>
+                  {EXP_OPTIONS.map(e => <option key={e}>{e}</option>)}
+                </select>
+                <input className="filter-input" placeholder="Search role…" value={filterRole} onChange={e => { setFilterRole(e.target.value); setPeersPage(1) }} />
+                {(filterDomain || filterExp || filterRole) && (
+                  <button className="filter-clear" onClick={() => { setFilterDomain(''); setFilterExp(''); setFilterRole(''); setPeersPage(1) }}>✕ Clear</button>
+                )}
+              </div>
+            )}
+
             {loadingUsers ? (
               <div className="users-grid">{[...Array(6)].map((_, i) => <div key={i} className="user-card skeleton" />)}</div>
-            ) : (
-              (() => {
-                // Non-auth: show top 6 most recently active users
-                // Auth: show match-scored peers (excluding self)
-                const displayUsers = !authUser
-                  ? users.slice(0, 8).map(u => ({ ...u, _score: 0 }))
-                  : sortedPeers
+            ) : (() => {
+              const displayUsers = !authUser
+                ? users.slice(0, 8).map(u => ({ ...u, _score: 0 }))
+                : pagedPeers
 
-                return displayUsers.length === 0 ? (
-                  <div className="empty-state">
-                    <p className="empty-icon">☕</p>
-                    <p className="empty-title">No one here yet</p>
-                    <p className="empty-subtitle">Share the link — be the first coffee at the table.</p>
-                    {!authUser && <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setShowAuth(true)}>Join Now →</button>}
-                  </div>
-                ) : (
+              return displayUsers.length === 0 ? (
+                <div className="empty-state">
+                  <p className="empty-icon">☕</p>
+                  <p className="empty-title">{authUser ? 'No peers match your filters' : 'No one here yet'}</p>
+                  <p className="empty-subtitle">{authUser ? 'Try clearing the filters above.' : 'Share the link — be the first coffee at the table.'}</p>
+                  {!authUser && <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setShowAuth(true)}>Join Now →</button>}
+                </div>
+              ) : (
+                <>
                   <div className="users-grid">
                     {displayUsers.map(user => (
                       <div key={user.id} className="user-card">
@@ -478,9 +525,17 @@ export default function HomePage() {
                       </div>
                     ))}
                   </div>
-                )
-              })()
-            )}
+                  {/* ── Pagination ── */}
+                  {authUser && totalPages > 1 && (
+                    <div className="pagination">
+                      <button className="page-btn" disabled={peersPage === 1} onClick={() => setPeersPage(p => p - 1)}>‹ Prev</button>
+                      <span className="page-info">{peersPage} / {totalPages} &nbsp;<span className="page-total">({filteredPeers.length} peers)</span></span>
+                      <button className="page-btn" disabled={peersPage === totalPages} onClick={() => setPeersPage(p => p + 1)}>Next ›</button>
+                    </div>
+                  )}
+                </>
+              )
+            })()}
           </section>
         )}
 
@@ -533,51 +588,60 @@ export default function HomePage() {
         {authUser && activeTab === 'chats' && (
           <section className="section">
             {selectedChat ? (
-              // ── Inline ChatRoom (social-media style, no modal) ──
               <div className="inline-chat-wrap">
                 <ChatRoom
                   sessionId={selectedChat.id}
                   userId={authUser.id}
                   otherUsername={selectedChat.other_username || 'Peer'}
                   peerUserId={selectedChat.user1_id === authUser.id ? selectedChat.user2_id : selectedChat.user1_id}
-                  onBack={() => { setSelectedChat(null); setLastMsg(prev => prev ? { ...prev, unread: false } : null) }}
+                  onBack={() => {
+                    setSelectedChat(null)
+                    setUnreadMap(prev => ({ ...prev, [selectedChat.id]: false }))
+                  }}
                   onEnd={() => {
-                    setActiveSession(null); setSelectedChat(null)
-                    setLastMsg(null); setChatNotification(false)
+                    setSessions(prev => prev.filter(s => s.id !== selectedChat.id))
+                    setSelectedChat(null)
+                    setUnreadMap(prev => { const n = { ...prev }; delete n[selectedChat.id]; return n })
+                    setLastMsgMap(prev => { const n = { ...prev }; delete n[selectedChat.id]; return n })
                     if (authUser) fetchProfile(authUser.id)
                     showToast('Session ended 👋')
                   }}
                 />
               </div>
             ) : (
-              // ── Session list (like DMs list) ──
               <div>
                 <h2 className="section-title" style={{ marginBottom: 16 }}>💬 Chats</h2>
-                {activeSession ? (
-                  <div
-                    className="dm-card"
-                    onClick={() => { setSelectedChat(activeSession); setChatNotification(false); setLastMsg(prev => prev ? { ...prev, unread: false } : null) }}
-                  >
-                    <div style={{ position: 'relative' }}>
-                      <div className="dm-avatar">{activeSession.other_username?.slice(0, 2).toUpperCase() || '??'}</div>
-                      {(chatNotification || lastMsg?.unread) && (
-                        <span style={{ position: 'absolute', top: -2, right: -2, width: 12, height: 12, background: '#22c55e', borderRadius: '50%', border: '2px solid #fff' }} />
-                      )}
-                    </div>
-                    <div className="dm-info">
-                      <span className="dm-name">{activeSession.other_username}</span>
-                      <span className={`dm-sub${lastMsg?.unread ? ' dm-sub-unread' : ''}`}>
-                        {lastMsg ? lastMsg.text.slice(0, 48) + (lastMsg.text.length > 48 ? '…' : '') : 'Mock Interview Session · Tap to chat'}
-                      </span>
-                    </div>
-                    {lastMsg?.unread && <span className="dm-badge">New</span>}
-                    <span className="dm-arrow">›</span>
-                  </div>
-                ) : (
+                {sessions.length === 0 ? (
                   <div className="empty-state">
                     <p className="empty-icon">💬</p>
                     <p className="empty-title">No chats yet</p>
                     <p className="empty-subtitle">Accept a coffee invite to start a mock interview session.</p>
+                  </div>
+                ) : (
+                  <div className="dm-list">
+                    {sessions.map(sess => {
+                      const hasUnread = !!unreadMap[sess.id]
+                      const preview = lastMsgMap[sess.id]
+                      return (
+                        <div key={sess.id} className="dm-card" onClick={() => {
+                          setSelectedChat(sess)
+                          setUnreadMap(prev => ({ ...prev, [sess.id]: false }))
+                        }}>
+                          <div style={{ position: 'relative' }}>
+                            <div className="dm-avatar">{sess.other_username?.slice(0, 2).toUpperCase() || '??'}</div>
+                            {hasUnread && <span style={{ position: 'absolute', top: -2, right: -2, width: 12, height: 12, background: '#22c55e', borderRadius: '50%', border: '2px solid #fff' }} />}
+                          </div>
+                          <div className="dm-info">
+                            <span className="dm-name">{sess.other_username}</span>
+                            <span className={`dm-sub${hasUnread ? ' dm-sub-unread' : ''}`}>
+                              {preview ? preview.slice(0, 50) + (preview.length > 50 ? '…' : '') : 'Mock Interview Session · Tap to chat'}
+                            </span>
+                          </div>
+                          {hasUnread && <span className="dm-badge">New</span>}
+                          <span className="dm-arrow">›</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -601,26 +665,31 @@ export default function HomePage() {
               </div>
               <div className="profile-page-card">
                 <div className="profile-fields">
-                  <div className="profile-field-row">
-                    <span className="pf-label">Target Role</span>
-                    <span className="pf-value">{profile.target_role || '—'}</span>
-                  </div>
-                  <div className="profile-field-row">
-                    <span className="pf-label">Experience</span>
-                    <span className="pf-value">{profile.experience}</span>
-                  </div>
-                  <div className="profile-field-row">
-                    <span className="pf-label">Domain</span>
-                    <span className="pf-value">{profile.domain}</span>
-                  </div>
-                  <div className="profile-field-row">
-                    <span className="pf-label">Member since</span>
-                    <span className="pf-value">{new Date(profile.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>
-                  </div>
+                  <div className="profile-field-row"><span className="pf-label">Target Role</span><span className="pf-value">{profile.target_role || '—'}</span></div>
+                  <div className="profile-field-row"><span className="pf-label">Experience</span><span className="pf-value">{profile.experience}</span></div>
+                  <div className="profile-field-row"><span className="pf-label">Domain</span><span className="pf-value">{profile.domain}</span></div>
+                  <div className="profile-field-row"><span className="pf-label">Member since</span><span className="pf-value">{new Date(profile.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span></div>
                 </div>
               </div>
               <div className="profile-page-card">
                 <div className="profile-actions-stack">
+                  <button className="btn btn-ghost w-full feedback-btn" onClick={() => { setShowFeedback(f => !f); setFeedbackSent(false) }}>💬 Share Feedback</button>
+                  {showFeedback && (
+                    <div className="feedback-box">
+                      {feedbackSent ? (
+                        <p className="feedback-sent">✅ Thanks for your feedback!</p>
+                      ) : (
+                        <>
+                          <textarea className="feedback-textarea" placeholder="Your thoughts, suggestions or bugs…" value={feedbackText} onChange={e => setFeedbackText(e.target.value)} rows={3} />
+                          <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-end', marginTop: 6 }} onClick={async () => {
+                            if (!feedbackText.trim()) return
+                            try { await fetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: authUser.id, text: feedbackText }) }) } catch {}
+                            setFeedbackSent(true); setFeedbackText('')
+                          }}>Submit</button>
+                        </>
+                      )}
+                    </div>
+                  )}
                   <button className="btn btn-secondary w-full" onClick={() => setShowProfile(true)}>✏️ Edit Profile</button>
                   <button className="btn btn-danger w-full" onClick={handleLogout}>Sign Out</button>
                 </div>
@@ -661,9 +730,9 @@ export default function HomePage() {
             {pendingInviteCount > 0 && <span className="bnb-badge">{pendingInviteCount}</span>}
             <span className="bnb-label">Requests</span>
           </button>
-          <button className={`bottom-nav-btn${activeTab === 'chats' ? ' active' : ''}`} onClick={() => { setActiveTab('chats'); setChatNotification(false) }}>
+          <button className={`bottom-nav-btn${activeTab === 'chats' ? ' active' : ''}`} onClick={() => setActiveTab('chats')}>
             <span className="bnb-icon">💬</span>
-            {chatNotification && <span className="bnb-badge">●</span>}
+            {totalUnread > 0 && <span className="bnb-badge">{totalUnread}</span>}
             <span className="bnb-label">Chats</span>
           </button>
           <button className={`bottom-nav-btn${activeTab === 'profile' ? ' active' : ''}`} onClick={() => setActiveTab('profile')}>
@@ -672,12 +741,22 @@ export default function HomePage() {
         </nav>
       )}
 
-      {/* ─── FOOTER (hidden on mobile when logged in, bottom-nav takes its place) ─── */}
       {!authUser && (
         <footer className="footer">
           <div className="container footer-inner">
-            <span className="footer-logo">☕ MatchMyInterview</span>
-            <span className="footer-note">Offer a peer a coffee · Practice together</span>
+            <div className="footer-brand">
+              <span className="footer-logo">☕ MatchMyInterview</span>
+              <span className="footer-note">Real mock interviews with real peers</span>
+            </div>
+            <nav className="footer-links">
+              <a href="/about">About</a>
+              <a href="/contact">Contact</a>
+              <a href="/privacy">Privacy Policy</a>
+              <a href="/terms">Terms of Service</a>
+              <a href="/refund">Refund Policy</a>
+              <a href="/cookies">Cookie Policy</a>
+              <a href="/sitemap.xml">Sitemap</a>
+            </nav>
           </div>
         </footer>
       )}
