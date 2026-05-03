@@ -760,7 +760,9 @@ export default function HomePage() {
         <footer className="footer">
           <div className="container footer-inner">
             <div className="footer-brand">
-              <span className="footer-logo">☕ MatchMyInterview</span>
+              <span className="footer-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <img src="/logo.svg" alt="MatchMyInterview logo" style={{ width: 18, height: 18 }} /> MatchMyInterview
+              </span>
               <span className="footer-note">Real mock interviews with real peers</span>
             </div>
             <nav className="footer-links">
