@@ -39,8 +39,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invite has expired' }, { status: 410 })
     }
 
-    await db.from('invites').update({ status: 'accepted' }).eq('id', inviteId)
-
     const channelName = `mmi_${uuidv4().replace(/-/g, '').slice(0, 16)}`
     const { data: sessionData, error: sessionError } = await db
       .from('sessions')
@@ -55,6 +53,8 @@ export async function POST(req: NextRequest) {
 
     if (sessionError)
       return NextResponse.json({ error: 'Failed to create session' }, { status: 500 })
+
+    await db.from('invites').update({ status: 'accepted' }).eq('id', inviteId)
 
     // If the sender included a note, insert it as the first message in the chat
     if (invite.note?.trim()) {

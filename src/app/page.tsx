@@ -184,40 +184,38 @@ export default function HomePage() {
     const client = getClient(); if (!client) return
 
     const { data: { subscription } } = client.auth.onAuthStateChange(async (_e: string, session: any) => {
-      try {
-        if (session?.user) {
-          setAuthUser(session.user as User)
-          setShowAuth(false)
+      if (session?.user) {
+        setAuthUser(session.user as User)
+        setShowAuth(false)
+        setAuthChecked(true) // Unblock UI instantly!
+
+        try {
           const p = await fetchProfile(session.user.id)
           if (!p) {
             setNeedsSetup(true)
           } else {
-            await Promise.all([
-              fetchInvites(session.user.id),
-              fetchSession(session.user.id),
-              pingActive(session.user.id),
-              fetchUserCoffeesShared(session.user.id),
-              fetchSentInvites(session.user.id),
-              fetchUsers(),
-              fetchCoffeesShared()
-            ])
+            // Fire and forget data fetches (don't block UI)
+            fetchInvites(session.user.id)
+            fetchSession(session.user.id)
+            pingActive(session.user.id)
+            fetchUserCoffeesShared(session.user.id)
+            fetchSentInvites(session.user.id)
+            fetchUsers()
+            fetchCoffeesShared()
           }
-        } else {
-          setAuthUser(null); setProfile(null); setNeedsSetup(false)
-          setSentToIds(new Set()); setSessions([]); setSelectedChat(null)
-          setUnreadMap({}); setLastMsgMap({})
+        } catch (err) {
+          console.error('[Boot error]', err)
         }
-      } catch (err) {
-        console.error('[Boot error]', err)
-      } finally {
+      } else {
+        setAuthUser(null); setProfile(null); setNeedsSetup(false)
+        setSentToIds(new Set()); setSessions([]); setSelectedChat(null)
+        setUnreadMap({}); setLastMsgMap({})
         setAuthChecked(true)
       }
     })
 
-    // Fallback: forcefully resolve auth check if event doesn't fire
-    client.auth.getSession().then(({ data, error }) => {
-      if (error || !data.session) setAuthChecked(true)
-    })
+    // Fallback: forcefully resolve auth check
+    client.auth.getSession().finally(() => setAuthChecked(true))
 
     // Load public data immediately on mount
     fetchUsers()
