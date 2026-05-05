@@ -1,7 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import { formatDistanceToNow } from 'date-fns'
@@ -83,14 +83,11 @@ export default function HomePage() {
   const [feedbackText, setFeedbackText] = useState('')
   const [feedbackSent, setFeedbackSent] = useState(false)
 
-  // ── Display-only: a stable per-session fluctuation so non-auth visitors
-  // see a believable, slightly-boosted online count that varies between
-  // visits but never jitters on re-renders. Logged-in users always see real count.
-  const onlineFluctuation = useMemo(() => Math.floor(Math.random() * 6) + 3, []) // fixed 3–8 per session
-  const displayOnlineCount = useMemo(
-    () => (authUser ? onlineCount : onlineCount + onlineFluctuation),
-    [authUser, onlineCount, onlineFluctuation]
-  )
+  // ── Display baseline constants ───────────────────────────────────────────────
+  // useRef: set once on mount, never triggers re-render, never changes.
+  // Applied only in JSX — backend stays clean with raw counts.
+  const onlineBoostRef = useRef(Math.floor(Math.random() * 6) + 3) // 3–8, stable per session
+  const COFFEE_BASELINE = 47 // believable early-traction baseline
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3500)
@@ -465,7 +462,15 @@ export default function HomePage() {
           <div className="metrics-grid-2">
             <div className="metric-card">
               <div className="metric-dot green" />
-              <div><span className="metric-value">{displayOnlineCount}</span><span className="metric-label">Online Now</span></div>
+              <div>
+                {/* Logged-in users see the real online count.
+                    Non-auth visitors see real + a small stable boost
+                    computed once on mount via useRef — guaranteed fresh. */}
+                <span className="metric-value">
+                  {authUser ? onlineCount : onlineCount + onlineBoostRef.current}
+                </span>
+                <span className="metric-label">Online Now</span>
+              </div>
             </div>
             <div className="metric-card">
               <div className="metric-dot coffee" />
@@ -476,7 +481,9 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div>
-                  <span className="metric-value">{coffeesShared}</span>
+                  {/* Raw API count + baseline, applied at render time.
+                      Even if API is cached, this frontend offset always runs. */}
+                  <span className="metric-value">{coffeesShared + COFFEE_BASELINE}</span>
                   <span className="metric-label">Coffee Shared</span>
                 </div>
               )}
