@@ -1,7 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import { formatDistanceToNow } from 'date-fns'
@@ -82,6 +82,12 @@ export default function HomePage() {
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedbackText, setFeedbackText] = useState('')
   const [feedbackSent, setFeedbackSent] = useState(false)
+
+  // ── Display-only: a stable per-session fluctuation so non-auth visitors
+  // see a believable, slightly-boosted online count that varies between
+  // visits but never jitters on re-renders. Logged-in users see real count.
+  const onlineFluctuation = useMemo(() => Math.floor(Math.random() * 6) + 3, []) // 3–8
+  const displayOnlineCount = authUser ? onlineCount : onlineCount + onlineFluctuation
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3500)
@@ -456,7 +462,7 @@ export default function HomePage() {
           <div className="metrics-grid-2">
             <div className="metric-card">
               <div className="metric-dot green" />
-              <div><span className="metric-value">{onlineCount}</span><span className="metric-label">Online Now</span></div>
+              <div><span className="metric-value">{displayOnlineCount}</span><span className="metric-label">Online Now</span></div>
             </div>
             <div className="metric-card">
               <div className="metric-dot coffee" />
