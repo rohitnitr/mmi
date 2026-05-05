@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 export const dynamic = 'force-dynamic'
 
 // Public endpoint — uses service role to bypass RLS
-// Returns raw invite count. Display baseline is applied client-side.
+// Returns total invite count (coffee shared metric for landing page)
 export async function GET() {
   try {
     const admin = getSupabaseAdmin()
@@ -18,4 +18,3 @@ export async function GET() {
     return NextResponse.json({ count: 0, error: err.message }, { status: 500 })
   }
 }
-
