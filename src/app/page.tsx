@@ -85,9 +85,12 @@ export default function HomePage() {
 
   // ── Display-only: a stable per-session fluctuation so non-auth visitors
   // see a believable, slightly-boosted online count that varies between
-  // visits but never jitters on re-renders. Logged-in users see real count.
-  const onlineFluctuation = useMemo(() => Math.floor(Math.random() * 6) + 3, []) // 3–8
-  const displayOnlineCount = authUser ? onlineCount : onlineCount + onlineFluctuation
+  // visits but never jitters on re-renders. Logged-in users always see real count.
+  const onlineFluctuation = useMemo(() => Math.floor(Math.random() * 6) + 3, []) // fixed 3–8 per session
+  const displayOnlineCount = useMemo(
+    () => (authUser ? onlineCount : onlineCount + onlineFluctuation),
+    [authUser, onlineCount, onlineFluctuation]
+  )
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3500)
