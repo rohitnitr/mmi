@@ -1,45 +1,66 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'About – MatchMyInterview',
-  description: 'MatchMyInterview is an AI-driven mock interview preparation platform designed to help job seekers confidently land their dream jobs.',
+  title: 'About Us – MatchMyInterview | Peer Mock Interview Platform',
+  description:
+    'MatchMyInterview is a peer-to-peer mock interview platform where you practice with real people using a coffee credit system. Learn how it works.',
+  keywords: 'mock interview, peer interview practice, coffee credits, interview preparation, MatchMyInterview',
+  openGraph: {
+    title: 'About MatchMyInterview – Real Practice with Real People',
+    description:
+      'A peer-to-peer mock interview platform that connects you with like-minded peers through a simple coffee credit system.',
+    type: 'website',
+  },
 }
 
 export default function AboutPage() {
   return (
     <main style={{ maxWidth: 760, margin: '0 auto', padding: '48px 20px 80px', fontFamily: 'Inter,system-ui,sans-serif', color: '#18181b', lineHeight: 1.75 }}>
       <a href="/" style={{ fontSize: 13, color: '#71717a', textDecoration: 'none' }}>← Back to MatchMyInterview</a>
+
       <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: 24, marginBottom: 8 }}>About MatchMyInterview</h1>
-      <p style={{ fontSize: 14, color: '#71717a', marginBottom: 32 }}>AI-Powered Mock Interview Preparation Platform | Last updated: 2026</p>
+      <p style={{ fontSize: 14, color: '#71717a', marginBottom: 32 }}>Peer-to-Peer Mock Interview Platform</p>
 
       <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Who We Are</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Welcome to MatchMyInterview</h2>
         <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 16 }}>
-          MatchMyInterview is an AI-driven mock interview preparation platform designed to help job seekers, students, and professionals confidently land their dream jobs. We believe that every candidate deserves a fair shot — and the best way to get there is through smart, realistic, and personalized practice.
+          MatchMyInterview is a <strong>peer-to-peer mock interview platform</strong> designed to help individuals practice and improve their interview skills in a realistic and collaborative environment.
         </p>
         <p style={{ fontSize: 15, color: '#3f3f46' }}>
-          Whether you are preparing for a technical coding interview, a behavioral HR round, a case study discussion, or a domain-specific role, MatchMyInterview adapts to your needs and helps you improve with every session.
+          We believe that the best way to prepare for interviews is by practicing with real people who are on the same journey as you. Our platform connects users with like-minded peers so they can conduct mock interviews, share feedback, and build confidence together.
         </p>
       </section>
 
       <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Our Mission</h2>
-        <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 16 }}>
-          Our mission is simple: to democratize interview preparation and give every candidate — regardless of background, location, or resources — access to world-class interview coaching powered by artificial intelligence.
-        </p>
-        <p style={{ fontSize: 15, color: '#3f3f46' }}>
-          We combine cutting-edge AI technology with real-world interview intelligence to simulate true interview conditions, provide instant feedback, and track your improvement over time.
-        </p>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>💡 How It Works</h2>
+        <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <li>Users can invite peers for a mock interview session.</li>
+          <li>To send an invite, users offer a virtual <strong>"coffee"</strong> to their peer.</li>
+          <li>Once the peer accepts the invite, both users are connected and can begin practicing.</li>
+          <li>The goal is simple: <em>real practice with real people.</em></li>
+        </ul>
+      </section>
+
+      <section style={{ marginBottom: 32, background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 14, padding: '20px 24px' }}>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>☕ Coffee Credit System</h2>
+        <ul style={{ fontSize: 15, color: '#92400e', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <li>Users can purchase coffee credits (e.g., <strong>5 coffees for ₹99</strong>).</li>
+          <li>Sending an invite requires <strong>1 coffee credit</strong>.</li>
+          <li>If the invited peer <strong>accepts within 24 hours</strong> → the session is confirmed and the coffee is consumed.</li>
+          <li>If the peer <strong>does not accept</strong> → the coffee is automatically refunded to your account.</li>
+        </ul>
+        <p style={{ fontSize: 13, color: '#92400e', marginTop: 12 }}>New users receive 1 free coffee on sign-up — no card required.</p>
       </section>
 
       <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>What Makes Us Different</h2>
-        <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <li><strong>1. Realistic AI-Powered Mock Interviews:</strong> MatchMyInterview conducts immersive mock interviews that closely replicate how real interviewers think and respond. Our AI adapts follow-up questions based on your answers — just like a human interviewer would.</li>
-          <li><strong>2. Personalized Feedback in Real Time:</strong> After every session, you receive a detailed performance report covering communication clarity, technical accuracy, confidence indicators, and areas for improvement — giving you actionable insights, not generic tips.</li>
-          <li><strong>3. Interview Matching Technology:</strong> Our proprietary matching engine aligns your mock interview sessions with actual job descriptions, company cultures, and industry expectations. You practice specifically for the roles you want — not generic scenarios.</li>
-          <li><strong>4. Wide Coverage Across Roles and Industries:</strong> From software engineering and data science to product management, finance, consulting, marketing, and healthcare — MatchMyInterview supports hundreds of job roles across every major industry.</li>
-          <li><strong>5. Progress Tracking & Analytics:</strong> Your MatchMyInterview dashboard shows a complete timeline of your preparation journey — session scores, improvement trends, weak spots, and readiness scores before you walk into your actual interview.</li>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>🎯 Our Mission</h2>
+        <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 12 }}>
+          To create a trusted space where individuals can:
+        </p>
+        <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <li>Practice interviews with real peers</li>
+          <li>Improve communication and confidence</li>
+          <li>Prepare effectively for real-world opportunities</li>
         </ul>
       </section>
 
@@ -47,44 +68,25 @@ export default function AboutPage() {
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Who We Help</h2>
         <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <li>Fresh graduates entering the job market for the first time</li>
-          <li>Experienced professionals switching industries or climbing the career ladder</li>
-          <li>International candidates preparing for interviews in new countries</li>
+          <li>Experienced professionals switching industries or roles</li>
           <li>Students targeting internships and campus placements</li>
           <li>Job seekers returning to work after a career break</li>
-          <li>Professionals preparing for high-stakes executive-level interviews</li>
-        </ul>
-      </section>
-
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Our Technology</h2>
-        <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 16 }}>
-          MatchMyInterview is built on state-of-the-art large language models (LLMs) and natural language processing (NLP) technology. Our AI evaluates tone, content, structure, and relevance of your answers, and provides coaching that goes beyond simple keyword matching.
-        </p>
-        <p style={{ fontSize: 15, color: '#3f3f46' }}>
-          We continuously train and update our models based on the latest hiring trends, real interview question databases, and feedback from successful candidates — ensuring you are always practicing with the most current and relevant content.
-        </p>
-      </section>
-
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Our Core Values</h2>
-        <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <li><strong>Accessibility</strong> — Interview coaching should be available to everyone, everywhere.</li>
-          <li><strong>Accuracy</strong> — Our feedback is grounded in real interview standards and measurable benchmarks.</li>
-          <li><strong>Privacy</strong> — Your data, practice sessions, and personal information are always secure.</li>
-          <li><strong>Continuous Improvement</strong> — We evolve constantly so your preparation never goes stale.</li>
-          <li><strong>Empowerment</strong> — We build your confidence so you walk into every interview ready to succeed.</li>
+          <li>Anyone who wants to build confidence before a real interview</li>
         </ul>
       </section>
 
       <section style={{ marginBottom: 32 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Get in Touch</h2>
         <p style={{ fontSize: 15, color: '#3f3f46' }}>
-          We would love to hear from you — whether you have a question, feedback, or a partnership inquiry.
-          <br /><br />
-          Website: <a href="https://www.matchmyinterview.com" style={{ color: '#18181b' }}>https://www.matchmyinterview.com</a><br />
-          Email: <a href="mailto:support@matchmyinterview.com" style={{ color: '#18181b' }}>support@matchmyinterview.com</a>
+          We would love to hear from you — whether you have a question, feedback, or a partnership inquiry.<br /><br />
+          📧 Email: <a href="mailto:support@matchmyinterview.com" style={{ color: '#18181b' }}>support@matchmyinterview.com</a><br />
+          🌐 Website: <a href="https://www.matchmyinterview.com" style={{ color: '#18181b' }}>https://www.matchmyinterview.com</a>
         </p>
       </section>
+
+      <div style={{ marginTop: 48, paddingTop: 24, borderTop: '1px solid #e4e4e7', fontSize: 13, color: '#71717a', textAlign: 'center' }}>
+        © {new Date().getFullYear()} MatchMyInterview. All rights reserved.
+      </div>
     </main>
   )
 }

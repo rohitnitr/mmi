@@ -72,6 +72,12 @@ export default function HomePage() {
   const [filterRole, setFilterRole] = useState('')
   const [peersPage, setPeersPage] = useState(1)
   const PEERS_PER_PAGE = 12
+  // non-auth filter + pagination (mirrors auth)
+  const [guestFilterDomain, setGuestFilterDomain] = useState('')
+  const [guestFilterExp, setGuestFilterExp] = useState('')
+  const [guestFilterRole, setGuestFilterRole] = useState('')
+  const [guestPage, setGuestPage] = useState(1)
+  const GUEST_PER_PAGE = 12
   // feedback
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedbackText, setFeedbackText] = useState('')
@@ -498,55 +504,97 @@ export default function HomePage() {
             {loadingUsers ? (
               <div className="users-grid">{[...Array(6)].map((_, i) => <div key={i} className="user-card skeleton" />)}</div>
             ) : (() => {
+              // ── Guest filtered list ──
+              const guestFiltered = users.filter(u => {
+                if (guestFilterDomain && u.domain !== guestFilterDomain) return false
+                if (guestFilterExp && u.experience !== guestFilterExp) return false
+                if (guestFilterRole && !u.target_role?.toLowerCase().includes(guestFilterRole.toLowerCase())) return false
+                return true
+              })
+              const guestTotalPages = Math.max(1, Math.ceil(guestFiltered.length / GUEST_PER_PAGE))
+              const guestPaged = guestFiltered.slice((guestPage - 1) * GUEST_PER_PAGE, guestPage * GUEST_PER_PAGE)
+
               const displayUsers = !authUser
-                ? users.slice(0, 8).map(u => ({ ...u, _score: 0 }))
+                ? guestPaged.map(u => ({ ...u, _score: 0 }))
                 : pagedPeers
 
-              return displayUsers.length === 0 ? (
-                <div className="empty-state">
-                  <p className="empty-icon">☕</p>
-                  <p className="empty-title">{authUser ? 'No peers match your filters' : 'No one here yet'}</p>
-                  <p className="empty-subtitle">{authUser ? 'Try clearing the filters above.' : 'Share the link — be the first coffee at the table.'}</p>
-                  {!authUser && <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setShowAuth(true)}>Join Now →</button>}
-                </div>
-              ) : (
+              const hasGuestFilters = guestFilterDomain || guestFilterExp || guestFilterRole
+
+              return (
                 <>
-                  <div className="users-grid">
-                    {displayUsers.map(user => (
-                      <div key={user.id} className="user-card">
-                        <div className="user-card-top">
-                          <div className="avatar md">{user.username.slice(0, 2).toUpperCase()}</div>
-                          <div className="online-dot" />
-                        </div>
-                        <div className="user-card-body">
-                          <h3 className="user-name">{user.username}</h3>
-                          <div className="user-tags">
-                            <span className="tag">{user.experience}</span>
-                            {user.domain && <span className="tag">{user.domain}</span>}
-                          </div>
-                          {user.target_role && <span className="user-role">🎯 {user.target_role}</span>}
-                          <span className="user-active">{formatDistanceToNow(new Date(user.last_active || user.created_at || Date.now()), { addSuffix: true })}</span>
-                          {profile && user._score >= 50 && <span className="match-badge">⚡ Great match</span>}
-                        </div>
-                        <button
-                          className={`btn btn-sm invite-btn${sentToIds.has(user.id) ? ' btn-sent' : ' btn-primary'}`}
-                          disabled={sentToIds.has(user.id)}
-                          onClick={() => {
-                            if (!authUser || !profile) { setShowAuth(true); return }
-                            if (!sentToIds.has(user.id)) setInviteTarget(user)
-                          }}>
-                          {sentToIds.has(user.id) ? '✓ Coffee Sent' : '☕ Offer Coffee'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  {/* ── Pagination ── */}
-                  {authUser && totalPages > 1 && (
-                    <div className="pagination">
-                      <button className="page-btn" disabled={peersPage === 1} onClick={() => setPeersPage(p => p - 1)}>‹ Prev</button>
-                      <span className="page-info">{peersPage} / {totalPages} &nbsp;<span className="page-total">({filteredPeers.length} peers)</span></span>
-                      <button className="page-btn" disabled={peersPage === totalPages} onClick={() => setPeersPage(p => p + 1)}>Next ›</button>
+                  {/* ── Guest Filters ── */}
+                  {!authUser && (
+                    <div className="filter-bar">
+                      <select className="filter-select" value={guestFilterDomain} onChange={e => { setGuestFilterDomain(e.target.value); setGuestPage(1) }}>
+                        <option value="">All Domains</option>
+                        {DOMAIN_OPTIONS.map(d => <option key={d}>{d}</option>)}
+                      </select>
+                      <select className="filter-select" value={guestFilterExp} onChange={e => { setGuestFilterExp(e.target.value); setGuestPage(1) }}>
+                        <option value="">All Experience</option>
+                        {EXP_OPTIONS.map(e => <option key={e}>{e}</option>)}
+                      </select>
+                      <input className="filter-input" placeholder="Search role…" value={guestFilterRole} onChange={e => { setGuestFilterRole(e.target.value); setGuestPage(1) }} />
+                      {hasGuestFilters && (
+                        <button className="filter-clear" onClick={() => { setGuestFilterDomain(''); setGuestFilterExp(''); setGuestFilterRole(''); setGuestPage(1) }}>✕ Clear</button>
+                      )}
                     </div>
+                  )}
+
+                  {displayUsers.length === 0 ? (
+                    <div className="empty-state">
+                      <p className="empty-icon">☕</p>
+                      <p className="empty-title">{authUser ? 'No peers match your filters' : 'No peers match your filters'}</p>
+                      <p className="empty-subtitle">{authUser ? 'Try clearing the filters above.' : 'Try clearing the filters above or join to find more peers.'}</p>
+                      {!authUser && <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setShowAuth(true)}>Join Now →</button>}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="users-grid">
+                        {displayUsers.map(user => (
+                          <div key={user.id} className="user-card">
+                            <div className="user-card-top">
+                              <div className="avatar md">{user.username.slice(0, 2).toUpperCase()}</div>
+                              <div className="online-dot" />
+                            </div>
+                            <div className="user-card-body">
+                              <h3 className="user-name">{user.username}</h3>
+                              <div className="user-tags">
+                                <span className="tag">{user.experience}</span>
+                                {user.domain && <span className="tag">{user.domain}</span>}
+                              </div>
+                              {user.target_role && <span className="user-role">🎯 {user.target_role}</span>}
+                              <span className="user-active">{formatDistanceToNow(new Date(user.last_active || user.created_at || Date.now()), { addSuffix: true })}</span>
+                              {profile && user._score >= 50 && <span className="match-badge">⚡ Great match</span>}
+                            </div>
+                            <button
+                              className={`btn btn-sm invite-btn${sentToIds.has(user.id) ? ' btn-sent' : ' btn-primary'}`}
+                              disabled={sentToIds.has(user.id)}
+                              onClick={() => {
+                                if (!authUser || !profile) { setShowAuth(true); return }
+                                if (!sentToIds.has(user.id)) setInviteTarget(user)
+                              }}>
+                              {sentToIds.has(user.id) ? '✓ Coffee Sent' : '☕ Offer Coffee'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      {/* ── Pagination (auth) ── */}
+                      {authUser && totalPages > 1 && (
+                        <div className="pagination">
+                          <button className="page-btn" disabled={peersPage === 1} onClick={() => setPeersPage(p => p - 1)}>‹ Prev</button>
+                          <span className="page-info">{peersPage} / {totalPages} &nbsp;<span className="page-total">({filteredPeers.length} peers)</span></span>
+                          <button className="page-btn" disabled={peersPage === totalPages} onClick={() => setPeersPage(p => p + 1)}>Next ›</button>
+                        </div>
+                      )}
+                      {/* ── Pagination (guest) ── */}
+                      {!authUser && guestTotalPages > 1 && (
+                        <div className="pagination">
+                          <button className="page-btn" disabled={guestPage === 1} onClick={() => setGuestPage(p => p - 1)}>‹ Prev</button>
+                          <span className="page-info">{guestPage} / {guestTotalPages} &nbsp;<span className="page-total">({guestFiltered.length} peers)</span></span>
+                          <button className="page-btn" disabled={guestPage === guestTotalPages} onClick={() => setGuestPage(p => p + 1)}>Next ›</button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )
