@@ -414,6 +414,12 @@ body{font-family:var(--font);background:var(--white);color:var(--gray-900);line-
 /* ── BTN SENT (coffee already sent) ──────────────────────────────────────── */
 .btn-sent{background:#f0fdf4 !important;color:#16a34a !important;border:1.5px solid #bbf7d0 !important;cursor:default !important}
 
+/* ── BTN ACCEPTED (invite accepted) ─────────────────────────────────────── */
+.btn-accepted{background:#eff6ff !important;color:#2563eb !important;border:1.5px solid #bfdbfe !important;cursor:default !important}
+
+/* ── BTN DECLINED (invite rejected) ─────────────────────────────────────── */
+.btn-declined{background:#f9fafb !important;color:#6b7280 !important;border:1.5px solid #e5e7eb !important;cursor:not-allowed !important}
+
 /* ── INLINE CHAT (social-media DM style) ────────────────────────────────── */
 .inline-chat-wrap{border-radius:16px;overflow:hidden;border:1px solid #e4e4e7;background:#fff}
 .inline-chat{display:flex;flex-direction:column;height:min(75vh,560px)}

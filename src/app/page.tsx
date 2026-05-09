@@ -62,7 +62,8 @@ export default function HomePage() {
   const [sendingInvite, setSendingInvite] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [loadingUsers, setLoadingUsers] = useState(true)
-  const [sentToIds, setSentToIds] = useState<Set<string>>(new Set())
+  // Maps receiver_id -> invite status: 'pending' | 'accepted' | 'rejected' | 'expired' | undefined
+  const [sentInviteMap, setSentInviteMap] = useState<Record<string, string>>({})
   const [selectedChat, setSelectedChat] = useState<Session | null>(null)
   const [unreadMap, setUnreadMap] = useState<Record<string, boolean>>({})   // sessionId -> has unread
   const [lastMsgMap, setLastMsgMap] = useState<Record<string, string>>({}) // sessionId -> preview text
@@ -154,9 +155,26 @@ export default function HomePage() {
 
   const fetchSentInvites = useCallback(async (uid: string) => {
     const c = sb(); if (!c) return
-    const { data } = await c.from('invites').select('receiver_id')
-      .eq('sender_id', uid).in('status', ['pending', 'accepted'])
-    if (data) setSentToIds(new Set(data.map((i: any) => i.receiver_id)))
+    // Fetch all sent invites with their current status
+    const { data } = await c.from('invites')
+      .select('receiver_id, status, expires_at')
+      .eq('sender_id', uid)
+      .order('created_at', { ascending: false })
+    if (data) {
+      const map: Record<string, string> = {}
+      for (const i of data as { receiver_id: string; status: string; expires_at: string }[]) {
+        // Only set if not already set (most recent invite wins due to ordering)
+        if (!map[i.receiver_id]) {
+          // If pending but expired, treat as expired so user can re-invite
+          if (i.status === 'pending' && new Date(i.expires_at) < new Date()) {
+            map[i.receiver_id] = 'expired'
+          } else {
+            map[i.receiver_id] = i.status
+          }
+        }
+      }
+      setSentInviteMap(map)
+    }
   }, [sb])
 
   const fetchLastMsgForSession = useCallback(async (sessionId: string, isOpen: boolean) => {
@@ -208,13 +226,14 @@ export default function HomePage() {
             fetchSentInvites(session.user.id)
             fetchUsers()
             fetchCoffeesShared()
+            // Refresh sent invites periodically so expired ones clear automatically
           }
         } catch (err) {
           console.error('[Boot error]', err)
         }
       } else {
         setAuthUser(null); setProfile(null); setNeedsSetup(false)
-        setSentToIds(new Set()); setSessions([]); setSelectedChat(null)
+        setSentInviteMap({}); setSessions([]); setSelectedChat(null)
         setUnreadMap({}); setLastMsgMap({})
         setAuthChecked(true)
       }
@@ -244,9 +263,10 @@ export default function HomePage() {
     const c = sb(); if (!c || !authUser) return
     const ch1 = c.channel('rt-users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => { fetchUsers(); fetchCoffeesShared() }).subscribe()
     const ch2 = c.channel('rt-invites').on('postgres_changes', { event: '*', schema: 'public', table: 'invites' }, () => { 
-      fetchInvites(authUser.id); 
-      fetchCoffeesShared();
-      fetchSession(authUser.id); // Catch accepted invites for sender
+      fetchInvites(authUser.id)
+      fetchCoffeesShared()
+      fetchSession(authUser.id) // Catch accepted invites for sender
+      fetchSentInvites(authUser.id) // Refresh sent invite statuses
     }).subscribe()
     const ch3 = c.channel('rt-sessions').on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => fetchSession(authUser.id)).subscribe()
     const ch4 = c.channel('rt-messages').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
@@ -273,7 +293,6 @@ export default function HomePage() {
   // ── Actions ──────────────────────────────────────────────────────────────
   const handleSendInvite = async (note: string) => {
     if (!authUser || !profile || !inviteTarget) return
-    if (profile.coffee_balance < 1) { setShowPayment(true); return }
     setSendingInvite(true)
     try {
       const res = await fetch('/api/invites/send', {
@@ -281,8 +300,11 @@ export default function HomePage() {
         body: JSON.stringify({ senderId: authUser.id, receiverId: inviteTarget.id, note }),
       })
       const data = await res.json()
-      if (res.ok) { showToast('Coffee offered! ☕'); await fetchProfile(authUser.id); if (inviteTarget) setSentToIds(prev => new Set(prev).add(inviteTarget.id)); setInviteTarget(null) }
-      else showToast(data.error || 'Failed to send invite', 'error')
+      if (res.ok) {
+        showToast('Coffee offered! ☕')
+        if (inviteTarget) setSentInviteMap(prev => ({ ...prev, [inviteTarget.id]: 'pending' }))
+        setInviteTarget(null)
+      } else showToast(data.error || 'Failed to send invite', 'error')
     } finally { setSendingInvite(false) }
   }
 
@@ -311,7 +333,7 @@ export default function HomePage() {
   const handleLogout = async () => {
     const c = sb(); if (c) await c.auth.signOut()
     setAuthUser(null); setProfile(null); setNeedsSetup(false)
-    setSentToIds(new Set()); setSessions([]); setSelectedChat(null); setUnreadMap({}); setLastMsgMap({})
+    setSentInviteMap({}); setSessions([]); setSelectedChat(null); setUnreadMap({}); setLastMsgMap({})
     setShowProfile(false); setActiveTab('peers')
     showToast('Signed out')
   }
@@ -376,7 +398,7 @@ export default function HomePage() {
             if (p) { await fetchInvites(authUser.id); await fetchSession(authUser.id) }
           }
           await fetchUsers()
-          showToast('Welcome! You have 1 free coffee ☕')
+          showToast('Welcome! You are all set ☕ Unlimited invites!')
         }} />
       )}
 
@@ -399,14 +421,14 @@ export default function HomePage() {
       {/* ─── HEADER ─── */}
       <header className="header">
         <div className="header-inner container">
-          <a href="/" className="logo" style={{ textDecoration: 'none' }}>
+          <div className="logo" style={{ cursor: 'default' }}>
             <img src="/logo.svg" alt="MatchMyInterview logo" className="logo-img" />
             <span className="logo-text">MatchMyInterview</span>
-          </a>
+          </div>
           <div className="header-right">
             {profile ? (
               <>
-                <button className="coffee-badge" onClick={() => setShowPayment(true)}>☕ {profile.coffee_balance}</button>
+                <button className="coffee-badge" onClick={() => setShowPayment(true)}>☕ ∞</button>
                 <button className="header-avatar" onClick={() => setActiveTab('profile')} title="Your profile">
                   {profile.username.slice(0, 2).toUpperCase()}
                 </button>
@@ -438,12 +460,12 @@ export default function HomePage() {
       {!authUser && (
         <section className="hero">
           <div className="container">
-            <div className="hero-badge">🚀 Free Beta · Join Now</div>
+            <div className="hero-badge">🚀 100% Free · Email Verified</div>
             <h1 className="hero-title">Offer a Peer a Coffee<br /><span className="hero-accent">Practice Interviews Together</span></h1>
             <p className="hero-subtitle">Real mock interviews with real peers.<br className="hide-mobile" /> Match. Practice. Get hired.</p>
             <div className="hero-actions">
               <button className="btn btn-primary btn-lg" onClick={() => setShowAuth(true)}>Start Practicing ☕</button>
-              <span className="hero-note">1 free coffee on signup · No card needed</span>
+              <span className="hero-note">Unlimited invites · No card needed</span>
             </div>
           </div>
         </section>
@@ -566,15 +588,33 @@ export default function HomePage() {
                               <span className="user-active">{formatDistanceToNow(new Date(user.last_active || user.created_at || Date.now()), { addSuffix: true })}</span>
                               {profile && user._score >= 50 && <span className="match-badge">⚡ Great match</span>}
                             </div>
-                            <button
-                              className={`btn btn-sm invite-btn${sentToIds.has(user.id) ? ' btn-sent' : ' btn-primary'}`}
-                              disabled={sentToIds.has(user.id)}
-                              onClick={() => {
-                                if (!authUser || !profile) { setShowAuth(true); return }
-                                if (!sentToIds.has(user.id)) setInviteTarget(user)
-                              }}>
-                              {sentToIds.has(user.id) ? '✓ Coffee Sent' : '☕ Offer Coffee'}
-                            </button>
+                            {(() => {
+                              const status = sentInviteMap[user.id]
+                              const isPending = status === 'pending'
+                              const isAccepted = status === 'accepted'
+                              const isDeclined = status === 'rejected'
+                              // expired or no status = can send again
+                              const canSend = !isPending && !isAccepted
+                              return (
+                                <button
+                                  className={`btn btn-sm invite-btn${
+                                    isAccepted ? ' btn-accepted' :
+                                    isDeclined ? ' btn-declined' :
+                                    isPending ? ' btn-sent' :
+                                    ' btn-primary'
+                                  }`}
+                                  disabled={!canSend || !authUser}
+                                  onClick={() => {
+                                    if (!authUser || !profile) { setShowAuth(true); return }
+                                    if (canSend) setInviteTarget(user)
+                                  }}>
+                                  {isAccepted ? '✓ Accepted' :
+                                   isDeclined ? '✗ Declined' :
+                                   isPending ? '✓ Coffee Sent' :
+                                   '☕ Offer Coffee'}
+                                </button>
+                              )
+                            })()}
                           </div>
                         ))}
                       </div>
@@ -721,9 +761,8 @@ export default function HomePage() {
                 <h2 className="profile-page-name">{profile.username}</h2>
                 <p className="profile-page-email">{authUser.email || profile.email || '—'}</p>
                 <div className="profile-coffee-row">
-                  <span className="profile-coffee-count">☕ {profile.coffee_balance}</span>
-                  <span className="profile-coffee-label">coffees</span>
-                  <button className="profile-topup-btn" onClick={() => setShowPayment(true)}>+ Top up</button>
+                  <span className="profile-coffee-count">☕ ∞</span>
+                  <span className="profile-coffee-label">Unlimited Coffee</span>
                 </div>
               </div>
               <div className="profile-page-card">
@@ -767,7 +806,7 @@ export default function HomePage() {
             <h2 className="section-title centered">How It Works</h2>
             <div className="steps-grid">
               {[
-                { n: 1, t: 'Sign Up Free', d: 'Verify with email in seconds. Get 1 free coffee to start.' },
+                { n: 1, t: 'Sign Up Free', d: 'Verify your email in seconds. Unlimited invites, no card needed.' },
                 { n: 2, t: 'Offer a Coffee', d: 'Find a peer and offer them a coffee to practice together.' },
                 { n: 3, t: 'Practice Together', d: 'Chat with your match. Take turns as interviewer and candidate.' },
               ].map(s => (

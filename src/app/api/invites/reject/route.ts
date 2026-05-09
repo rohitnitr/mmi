@@ -8,10 +8,6 @@ interface InviteRow {
   status: string
 }
 
-interface UserRow {
-  coffee_balance: number
-}
-
 export async function POST(req: NextRequest) {
   try {
     const { inviteId, userId } = await req.json()
@@ -37,17 +33,7 @@ export async function POST(req: NextRequest) {
 
     await db.from('invites').update({ status: 'rejected' }).eq('id', inviteId)
 
-    const { data: senderData } = await db
-      .from('users')
-      .select('coffee_balance')
-      .eq('id', invite.sender_id)
-      .single()
-
-    if (senderData) {
-      const sender = senderData as UserRow
-      await db.from('users').update({ coffee_balance: sender.coffee_balance + 1 }).eq('id', invite.sender_id)
-      await db.from('transactions').insert({ user_id: invite.sender_id, type: 'credit', amount: 1, reason: 'refund' })
-    }
+    // No coffee refund needed — invites are free for all verified users
 
     return NextResponse.json({ success: true })
   } catch {

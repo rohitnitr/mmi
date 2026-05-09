@@ -60,7 +60,7 @@ export default function InviteModal({ receiver, onSend, onClose, sending }: Invi
         >
           {sending ? <span className="spinner" /> : <><span>☕</span> Offer a Coffee</>}
         </button>
-        <p className="invite-modal-hint">Costs 1 coffee · They have 24h to accept · Refund if declined</p>
+        <p className="invite-modal-hint">Free · They have 7 days to accept · Unlimited invites</p>
       </div>
     </div>
   )

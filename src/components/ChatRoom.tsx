@@ -77,9 +77,23 @@ export default function ChatRoom({ sessionId, userId, peerUserId, otherUsername,
         table: 'messages',
         filter: `session_id=eq.${sessionId}`,
       }, (payload: any) => {
+        const incoming = payload.new as Message
         setMessages(prev => {
-          if (prev.find(m => m.id === payload.new.id)) return prev
-          return [...prev, payload.new as Message]
+          // Already have this exact id (real or optimistic already replaced) — skip
+          if (prev.some(m => m.id === incoming.id)) return prev
+          // Replace any pending optimistic message with the same content+sender
+          // (handles race: insert response not yet back when realtime fires)
+          const optIdx = prev.findIndex(
+            m => m.id.startsWith('opt-') &&
+                 m.sender_id === incoming.sender_id &&
+                 m.content === incoming.content
+          )
+          if (optIdx !== -1) {
+            const next = [...prev]
+            next[optIdx] = incoming
+            return next
+          }
+          return [...prev, incoming]
         })
       })
       .subscribe()

@@ -42,7 +42,7 @@ export default function OnboardingModal({ onClose }: Props) {
             {loading ? <span className="spinner" /> : 'Continue with Google'}
           </button>
           {error && <p className="form-error">{error}</p>}
-          <p className="ob-note">🎁 1 free coffee on signup · No card needed</p>
+          <p className="ob-note">☕ Completely free · Unlimited invites · No card needed</p>
         </div>
       </div>
     </div>
