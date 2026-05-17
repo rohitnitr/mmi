@@ -42,7 +42,7 @@ export default function ProfileModal({ profile, onClose, onUpdate, onLogout }: P
 
         {/* Avatar + Name */}
         <div className="profile-header">
-          <div className="profile-avatar">{profile.username.slice(0, 2).toUpperCase()}</div>
+          <div className="profile-avatar">{(profile.username || 'U').slice(0, 2).toUpperCase()}</div>
           {editing ? (
             <input className="form-input" style={{ textAlign: 'center', fontWeight: 700 }} value={username}
               onChange={e => setUsername(e.target.value)} placeholder="Display name" />

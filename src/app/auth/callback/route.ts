@@ -16,6 +16,19 @@ export async function GET(req: NextRequest) {
   }
 
   if (code) {
+    const forwardedHost = req.headers.get('x-forwarded-host')
+    const isLocalEnv = process.env.NODE_ENV === 'development'
+    
+    // Create the response object FIRST so we can attach cookies to it
+    let supabaseResponse: NextResponse
+    if (isLocalEnv) {
+      supabaseResponse = NextResponse.redirect(`${origin}${next}`)
+    } else if (forwardedHost) {
+      supabaseResponse = NextResponse.redirect(`https://${forwardedHost}${next}`)
+    } else {
+      supabaseResponse = NextResponse.redirect(`${origin}${next}`)
+    }
+
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,11 +40,16 @@ export async function GET(req: NextRequest) {
           },
           setAll(cookiesToSet) {
             try {
+              // Set on the request
               cookiesToSet.forEach(({ name, value, options }) =>
                 cookieStore.set(name, value, options)
               )
-            } catch {
-              // Server component — read-only in some contexts; client picks up from URL
+              // Set on the response
+              cookiesToSet.forEach(({ name, value, options }) =>
+                supabaseResponse.cookies.set(name, value, options)
+              )
+            } catch (error) {
+              console.error('Cookie set error in callback:', error)
             }
           },
         },
@@ -40,7 +58,7 @@ export async function GET(req: NextRequest) {
 
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
     if (!exchangeError) {
-      return NextResponse.redirect(`${origin}${next}`)
+      return supabaseResponse
     }
     console.error('[auth/callback] exchangeCodeForSession error:', exchangeError.message)
   }

@@ -6,6 +6,8 @@ import { getClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import { formatDistanceToNow } from 'date-fns'
 import lazyLoad from 'next/dynamic'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Users, Coffee, Sparkles, Star, ChevronRight, MessageCircle, Activity } from 'lucide-react'
 import OnboardingModal from '@/components/OnboardingModal'
 import ProfileSetupModal from '@/components/ProfileSetupModal'
 import ProfileModal from '@/components/ProfileModal'
@@ -207,7 +209,9 @@ export default function HomePage() {
   useEffect(() => {
     const client = getClient(); if (!client) return
 
-    const { data: { subscription } } = client.auth.onAuthStateChange(async (_e: string, session: any) => {
+    let isBooting = true
+
+    const handleSession = async (session: any) => {
       if (session?.user) {
         setAuthUser(session.user as User)
         setShowAuth(false)
@@ -226,7 +230,6 @@ export default function HomePage() {
             fetchSentInvites(session.user.id)
             fetchUsers()
             fetchCoffeesShared()
-            // Refresh sent invites periodically so expired ones clear automatically
           }
         } catch (err) {
           console.error('[Boot error]', err)
@@ -237,6 +240,19 @@ export default function HomePage() {
         setUnreadMap({}); setLastMsgMap({})
         setAuthChecked(true)
       }
+    }
+
+    client.auth.getSession().then(({ data: { session } }) => {
+      if (isBooting) {
+        handleSession(session)
+      }
+    }).finally(() => {
+      clearTimeout(authTimeout)
+      setAuthChecked(true)
+    })
+
+    const { data: { subscription } } = client.auth.onAuthStateChange(async (_e: string, session: any) => {
+      handleSession(session)
     })
 
     // Fallback: forcefully resolve auth check
@@ -245,16 +261,14 @@ export default function HomePage() {
       setAuthChecked(true)
     }, 2500)
 
-    client.auth.getSession().finally(() => {
-      clearTimeout(authTimeout)
-      setAuthChecked(true)
-    })
-
     // Load public data immediately on mount
     fetchUsers()
     fetchCoffeesShared()
 
-    return () => subscription.unsubscribe()
+    return () => {
+      isBooting = false
+      subscription.unsubscribe()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -335,7 +349,7 @@ export default function HomePage() {
     setAuthUser(null); setProfile(null); setNeedsSetup(false)
     setSentInviteMap({}); setSessions([]); setSelectedChat(null); setUnreadMap({}); setLastMsgMap({})
     setShowProfile(false); setActiveTab('peers')
-    showToast('Signed out')
+    window.location.href = '/'
   }
 
   const sortedPeers = users
@@ -422,15 +436,16 @@ export default function HomePage() {
       <header className="header">
         <div className="header-inner container">
           <div className="logo" style={{ cursor: 'default' }}>
-            <img src="/logo.svg" alt="MatchMyInterview logo" className="logo-img" />
+            <img src="/logo.png" alt="MatchMyInterview logo" className="logo-img" />
             <span className="logo-text">MatchMyInterview</span>
           </div>
-          <div className="header-right">
+          <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <a href="/blog" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors" style={{ textDecoration: 'none' }}>Blog</a>
             {profile ? (
               <>
                 <button className="coffee-badge" onClick={() => setShowPayment(true)}>☕ ∞</button>
                 <button className="header-avatar" onClick={() => setActiveTab('profile')} title="Your profile">
-                  {profile.username.slice(0, 2).toUpperCase()}
+                  {(profile.username || 'U').slice(0, 2).toUpperCase()}
                 </button>
               </>
             ) : (
@@ -459,14 +474,33 @@ export default function HomePage() {
       {/* ─── HERO (non-auth) ─── */}
       {!authUser && (
         <section className="hero">
-          <div className="container">
-            <div className="hero-badge">🚀 100% Free · Email Verified</div>
-            <h1 className="hero-title">Offer a Peer a Coffee<br /><span className="hero-accent">Practice Interviews Together</span></h1>
-            <p className="hero-subtitle">Real mock interviews with real peers.<br className="hide-mobile" /> Match. Practice. Get hired.</p>
-            <div className="hero-actions">
-              <button className="btn btn-primary btn-lg" onClick={() => setShowAuth(true)}>Start Practicing ☕</button>
-              <span className="hero-note">Unlimited invites · No card needed</span>
-            </div>
+          <div className="hero-container container">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="hero-badge">
+              <Sparkles size={14} className="text-blue-500" /> 100% Free · Email Verified Community
+            </motion.div>
+            
+            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="hero-title">
+              Offer a Peer a Coffee<br />
+              <span className="hero-accent">Practice Interviews Together</span>
+            </motion.h1>
+            
+            <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="hero-subtitle">
+              Stop practicing with AI bots. Connect with real peers, run mock interviews, and land your dream job faster.
+            </motion.p>
+            
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="hero-actions">
+              <button className="btn btn-primary btn-lg" onClick={() => setShowAuth(true)}>
+                Start Practicing <ChevronRight size={18} />
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Star key={i} size={14} fill="#F59E0B" color="#F59E0B" />
+                  ))}
+                </div>
+                <span className="hero-note">Loved by 500+ candidates</span>
+              </div>
+            </motion.div>
           </div>
         </section>
       )}
@@ -475,26 +509,45 @@ export default function HomePage() {
 
         {/* ─── METRICS (always visible) ─── */}
         <section className="metrics-section">
-          <div className="metrics-grid-2">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.4 }} className="metrics-grid-2">
             <div className="metric-card">
               <div className="metric-dot green" />
-              <div><span className="metric-value">{onlineCount}</span><span className="metric-label">Online Now</span></div>
+              <div><span className="metric-value">{onlineCount}</span><span className="metric-label">Online & Ready to Practice</span></div>
             </div>
             <div className="metric-card">
-              <div className="metric-dot coffee" />
+              <div className="metric-dot blue" />
               {authUser ? (
                 <div>
                   <span className="metric-value">{userCoffeesShared}</span>
-                  <span className="metric-label">You Shared</span>
+                  <span className="metric-label">Coffees You Shared</span>
                 </div>
               ) : (
                 <div>
                   <span className="metric-value">{coffeesShared}</span>
-                  <span className="metric-label">Coffee Shared</span>
+                  <span className="metric-label">Total Coffees Shared</span>
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
+
+          {/* Recent Activity Ticker */}
+          {!authUser && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.5 }} style={{ marginTop: 16, padding: '12px 16px', background: 'var(--white)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--gray-200)', display: 'flex', alignItems: 'center', gap: 12, overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--gray-500)', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>
+                <Activity size={14} color="var(--primary)" /> Live Activity:
+              </div>
+              <div className="ticker-wrap" style={{ flex: 1, overflow: 'hidden', position: 'relative', WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent)' }}>
+                <div className="ticker" style={{ display: 'flex', gap: 32, whiteSpace: 'nowrap', animation: 'ticker 25s linear infinite' }}>
+                  <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>🎉 Rahul (SDE) just completed a mock interview</span>
+                  <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>☕ Priya offered a coffee to Amit</span>
+                  <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>⭐ Sneha (Data Analyst) joined the community</span>
+                  <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>🚀 Vikram is practicing for an upcoming FAANG interview</span>
+                  <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>🎉 Rahul (SDE) just completed a mock interview</span>
+                  <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>☕ Priya offered a coffee to Amit</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </section>
 
         {/* ─── FIND PEERS TAB ─── */}
@@ -572,10 +625,18 @@ export default function HomePage() {
                   ) : (
                     <>
                       <div className="users-grid">
-                        {displayUsers.map(user => (
-                          <div key={user.id} className="user-card">
-                            <div className="user-card-top">
-                              <div className="avatar md">{user.username.slice(0, 2).toUpperCase()}</div>
+                        <AnimatePresence mode="popLayout">
+                          {displayUsers.map((user, idx) => (
+                            <motion.div 
+                              key={user.id ? `${user.id}-${idx}` : `user-${idx}`}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              transition={{ duration: 0.4, delay: idx * 0.05 }}
+                              className="user-card"
+                            >
+                              <div className="user-card-top">
+                                <div className="avatar md">{(user.username || 'U').slice(0, 2).toUpperCase()}</div>
                               <div className="online-dot" />
                             </div>
                             <div className="user-card-body">
@@ -615,8 +676,9 @@ export default function HomePage() {
                                 </button>
                               )
                             })()}
-                          </div>
+                          </motion.div>
                         ))}
+                        </AnimatePresence>
                       </div>
                       {/* ── Pagination (auth) ── */}
                       {authUser && totalPages > 1 && (
@@ -757,7 +819,7 @@ export default function HomePage() {
           <section className="section">
             <div className="profile-page">
               <div className="profile-page-card">
-                <div className="profile-page-avatar">{profile.username.slice(0, 2).toUpperCase()}</div>
+                <div className="profile-page-avatar">{(profile.username || 'U').slice(0, 2).toUpperCase()}</div>
                 <h2 className="profile-page-name">{profile.username}</h2>
                 <p className="profile-page-email">{authUser.email || profile.email || '—'}</p>
                 <div className="profile-coffee-row">
@@ -844,25 +906,56 @@ export default function HomePage() {
       )}
 
       {!authUser && (
-        <footer className="footer">
-          <div className="container footer-inner">
-            <div className="footer-brand">
-              <span className="footer-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <img src="/logo.svg" alt="MatchMyInterview logo" style={{ width: 18, height: 18 }} /> MatchMyInterview
-              </span>
-              <span className="footer-note">Real mock interviews with real peers</span>
+        <>
+          {/* ─── TRUST & CTA (non-auth) ─── */}
+          <section className="cta-section" style={{ padding: '80px 0', background: 'var(--gray-900)', color: 'var(--white)', textAlign: 'center', marginTop: '60px' }}>
+            <div className="container">
+              <h2 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, marginBottom: 16, letterSpacing: '-1px' }}>Ready to ace your next interview?</h2>
+              <p style={{ fontSize: 18, color: 'var(--gray-400)', marginBottom: 32, maxWidth: 600, margin: '0 auto 32px' }}>Join hundreds of students and professionals practicing daily. Build confidence, refine your answers, and get hired.</p>
+              <button className="btn btn-primary btn-lg" onClick={() => setShowAuth(true)} style={{ background: 'var(--white)', color: 'var(--gray-900)' }}>
+                Create Free Account
+              </button>
+              <p style={{ fontSize: 13, color: 'var(--gray-500)', marginTop: 16 }}>Takes 30 seconds. No credit card required.</p>
             </div>
-            <nav className="footer-links">
-              <a href="/about">About</a>
-              <a href="/contact">Contact</a>
-              <a href="/privacy">Privacy Policy</a>
-              <a href="/terms">Terms of Service</a>
-              <a href="/refund">Refund Policy</a>
-              <a href="/cookies">Cookie Policy</a>
-              <a href="/sitemap.xml">Sitemap</a>
-            </nav>
-          </div>
-        </footer>
+          </section>
+
+          <footer className="footer" style={{ borderTop: 'none', background: 'var(--gray-50)' }}>
+            <div className="container footer-inner">
+              <div className="footer-brand">
+                <span className="footer-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <img src="/logo.png" alt="MatchMyInterview logo" style={{ width: 28, height: 28, borderRadius: 6 }} /> 
+                  MatchMyInterview
+                </span>
+                <span className="footer-note">The premium mock interview platform for ambitious candidates.</span>
+                
+                <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                  <a href="https://twitter.com/matchmyinterview" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gray-500)' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
+                  </a>
+                  <a href="https://linkedin.com/company/matchmyinterview" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gray-500)' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
+                  </a>
+                  <a href="https://instagram.com/matchmyinterview" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gray-500)' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+                  </a>
+                  <a href="https://youtube.com/@matchmyinterview" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gray-500)' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>
+                  </a>
+                </div>
+              </div>
+              <nav className="footer-links">
+                <a href="/about">About</a>
+                <a href="/contact">Contact</a>
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+                <a href="/sitemap.xml">Sitemap</a>
+              </nav>
+            </div>
+            <div className="container" style={{ textAlign: 'center', marginTop: 32, fontSize: 12, color: 'var(--gray-400)' }}>
+              &copy; {new Date().getFullYear()} MatchMyInterview. All rights reserved.
+            </div>
+          </footer>
+        </>
       )}
     </div>
   )
