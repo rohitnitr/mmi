@@ -32,8 +32,13 @@ export function GlobalBlogFooter() {
           <a href="/sitemap.xml">Sitemap</a>
         </nav>
       </div>
-      <div className="container" style={{ textAlign: 'center', marginTop: 32, fontSize: 12, color: 'var(--gray-400)', padding: '0' }}>
-        &copy; {new Date().getFullYear()} MatchMyInterview. All rights reserved.
+      <div className="container" style={{ textAlign: 'center', marginTop: 32, padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+        <a href="https://www.betterlaunch.co" target="_blank" rel="noopener noreferrer">
+          <img src="https://www.betterlaunch.co/badge.svg" alt="Featured on Better Launch" style={{ width: 160, height: 'auto' }} />
+        </a>
+        <p style={{ fontSize: 12, color: 'var(--gray-400)', margin: 0 }}>
+          &copy; {new Date().getFullYear()} MatchMyInterview. All rights reserved.
+        </p>
       </div>
     </footer>
   )
