@@ -434,8 +434,7 @@ export default function HomePage() {
       )}
 
       {/* ─── HEADER / NAV ─── */}
-      {!authUser ? (
-      ) : (
+      {!authUser ? null : (
         <header className="header">
           <div className="header-inner container">
             <div className="logo" style={{ cursor: 'default' }}>
