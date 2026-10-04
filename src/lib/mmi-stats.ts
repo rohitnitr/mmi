@@ -1,4 +1,7 @@
 // Server-only. Computes XP, level, MMI score and streaks from real data. No stored tables.
+// Anti-gaming: an evaluation does not count if (a) it is beyond the 2nd from the same evaluator to the
+// same person, (b) its session lasted under 2 minutes, or (c) the pair only exchange 5-star ratings
+// (3+ evaluations between them). Uncounted evaluations still show in reports.
 
 export type Stats = {
   userId: string
@@ -8,6 +11,7 @@ export type Stats = {
   evalsGiven: number
   detailedGiven: number
   evalsReceived: number
+  uncounted: number
   distinctPeers: number
   avgOverall: number | null
   mmi: number | null
@@ -21,6 +25,8 @@ export type Stats = {
 }
 
 const IST = 330 * 60 * 1000
+const MIN_SECONDS = 120
+const MAX_PER_PAIR = 2
 const dayKey = (d: string | Date) => new Date(new Date(d).getTime() + IST).toISOString().slice(0, 10)
 const keyOf = (n: number) => new Date(n * 86400000).toISOString().slice(0, 10)
 const xpForLevel = (l: number) => 40 * (l - 1) * (l - 1)
@@ -51,6 +57,7 @@ type Acc = {
   given: number
   detailed: number
   received: number
+  uncounted: number
   sumOverall: number
   peers: Set<string>
   days: Set<string>
@@ -58,8 +65,8 @@ type Acc = {
 
 export async function buildAll(admin: any): Promise<Map<string, Stats>> {
   const [ev, se, us, pr] = await Promise.all([
-    admin.from('session_evaluations').select('evaluator_id, evaluatee_id, overall, strengths, improvements, created_at').range(0, 9999),
-    admin.from('sessions').select('user1_id, user2_id, start_time, end_time, status').range(0, 9999),
+    admin.from('session_evaluations').select('session_id, evaluator_id, evaluatee_id, overall, strengths, improvements, created_at').range(0, 9999),
+    admin.from('sessions').select('id, user1_id, user2_id, start_time, end_time, status').range(0, 9999),
     admin.from('users').select('id, username').range(0, 9999),
     admin.from('profiles').select('*').range(0, 9999),
   ])
@@ -68,22 +75,53 @@ export async function buildAll(admin: any): Promise<Map<string, Stats>> {
   const get = (id: string): Acc => {
     let a = acc.get(id)
     if (!a) {
-      a = { sessions: 0, given: 0, detailed: 0, received: 0, sumOverall: 0, peers: new Set(), days: new Set() }
+      a = { sessions: 0, given: 0, detailed: 0, received: 0, uncounted: 0, sumOverall: 0, peers: new Set(), days: new Set() }
       acc.set(id, a)
     }
     return a
   }
 
+  // session length in seconds (undefined when unknown, which is treated as OK)
+  const dur = new Map<string, number>()
   for (const s of (se.data ?? []) as any[]) {
+    if (s.id && s.start_time && s.end_time) dur.set(s.id, (Date.parse(s.end_time) - Date.parse(s.start_time)) / 1000)
+    const long = !dur.has(s.id) || (dur.get(s.id) as number) >= MIN_SECONDS
     const ended = !!s.end_time || (s.status && s.status !== 'active')
     for (const id of [s.user1_id, s.user2_id]) {
       if (!id) continue
       const a = get(id)
-      if (ended) a.sessions++
-      if (s.start_time) a.days.add(dayKey(s.start_time))
+      if (ended && long) a.sessions++
+      if (s.start_time && long) a.days.add(dayKey(s.start_time))
     }
   }
-  for (const e of (ev.data ?? []) as any[]) {
+
+  const evs = ((ev.data ?? []) as any[]).slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
+
+  const pairs = new Map<string, { n: number; all5: boolean }>()
+  for (const e of evs) {
+    const k = e.evaluator_id + '>' + e.evaluatee_id
+    const p = pairs.get(k) || { n: 0, all5: true }
+    p.n++
+    if (Number(e.overall) !== 5) p.all5 = false
+    pairs.set(k, p)
+  }
+  const reciprocal = (a: string, b: string) => {
+    const x = pairs.get(a + '>' + b)
+    const y = pairs.get(b + '>' + a)
+    return !!x && !!y && x.all5 && y.all5 && x.n + y.n >= 3
+  }
+
+  const seen = new Map<string, number>()
+  for (const e of evs) {
+    const k = e.evaluator_id + '>' + e.evaluatee_id
+    const c = (seen.get(k) || 0) + 1
+    seen.set(k, c)
+    const d = dur.get(e.session_id)
+    const bad = (d !== undefined && d < MIN_SECONDS) || c > MAX_PER_PAIR || reciprocal(e.evaluator_id, e.evaluatee_id)
+    if (bad) {
+      get(e.evaluatee_id).uncounted++
+      continue
+    }
     const g = get(e.evaluator_id)
     g.given++
     if (String(e.strengths ?? '').trim().length >= 20 && String(e.improvements ?? '').trim().length >= 20) g.detailed++
@@ -112,6 +150,7 @@ export async function buildAll(admin: any): Promise<Map<string, Stats>> {
       evalsGiven: a.given,
       detailedGiven: a.detailed,
       evalsReceived: a.received,
+      uncounted: a.uncounted,
       distinctPeers: a.peers.size,
       avgOverall: a.received > 0 ? Math.round((a.sumOverall / a.received) * 10) / 10 : null,
       mmi: adj === null ? null : Math.round((adj / 5) * 100),

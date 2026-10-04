@@ -30,6 +30,9 @@ const fmt = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numer
 
 export function ReportList() {
   const [items, setItems] = useState<any[] | null>(null)
+  useEffect(() => {
+    try { localStorage.setItem('mmi_reports_seen', String(Date.now())) } catch {}
+  }, [])
   const [err, setErr] = useState('')
   useEffect(() => {
     let on = true

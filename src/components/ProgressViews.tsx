@@ -29,15 +29,30 @@ function useProgress() {
 
 export function ProgressChip() {
   const { d } = useProgress()
+  const [fresh, setFresh] = useState(0)
+  useEffect(() => {
+    let on = true
+    ;(async () => {
+      try {
+        const res = await authedFetch('/api/evaluations/report')
+        const j = await res.json().catch(() => ({}))
+        const seen = Number(localStorage.getItem('mmi_reports_seen') || 0)
+        const n = (j.items || []).filter((it: any) => new Date(it.created_at).getTime() > seen).length
+        if (on) setFresh(n)
+      } catch {}
+    })()
+    return () => { on = false }
+  }, [])
   if (!d) return null
   return (
     <Link
-      href="/progress"
+      href={fresh > 0 ? '/reports' : '/progress'}
       title="Your progress and leaderboard"
       style={{ marginLeft: 12, fontSize: 13, padding: '2px 10px', borderRadius: 99, border: '1px solid rgba(128,128,128,.4)', textDecoration: 'none', color: 'inherit', whiteSpace: 'nowrap' }}
     >
       Lv {d.level} · MMI {d.mmi === null ? '–' : d.mmi}
       {d.streak > 0 ? ' · 🔥' + d.streak : ''}
+      {fresh > 0 ? ' · ' + fresh + ' new' : ''}
     </Link>
   )
 }
@@ -86,6 +101,11 @@ export function ProgressPanel() {
 
       <section style={card}>
         <h2 style={{ fontSize: 16, margin: '0 0 8px' }}>How this is calculated</h2>
+        {d.uncounted > 0 && (
+          <p style={{ ...muted, margin: '0 0 8px' }}>
+            {d.uncounted} evaluation(s) you received do not count toward your score yet: more than 2 from the same peer, sessions under 2 minutes, or pairs that only exchange 5-star ratings.
+          </p>
+        )}
         <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, lineHeight: 1.7 }}>
           <li>XP: 10 per finished session, 15 per evaluation you give (+5 if both comment boxes have real feedback), 10 plus 2x the overall score per evaluation you receive.</li>
           <li>MMI score: your average overall rating out of 100, balanced toward the middle until you have more evaluations. It is marked provisional until 3 different peers have rated you.</li>
