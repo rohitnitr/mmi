@@ -1,28 +1,23 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
+import './blog.css'
 
 export function ReadingProgress() {
-  const [progress, setProgress] = useState(0)
-
+  const bar = useRef<HTMLElement>(null)
   useEffect(() => {
+    let raf = 0
     const update = () => {
-      const el = document.documentElement
-      const scrollTop = el.scrollTop || document.body.scrollTop
-      const height = el.scrollHeight - el.clientHeight
-      setProgress(height > 0 ? Math.min(100, (scrollTop / height) * 100) : 0)
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const el = document.documentElement
+        const h = el.scrollHeight - el.clientHeight
+        if (bar.current) bar.current.style.transform = `scaleX(${h > 0 ? Math.min(1, el.scrollTop / h) : 0})`
+      })
     }
     window.addEventListener('scroll', update, { passive: true })
     update()
-    return () => window.removeEventListener('scroll', update)
+    return () => { window.removeEventListener('scroll', update); cancelAnimationFrame(raf) }
   }, [])
-
-  return (
-    <div className="fixed top-0 left-0 right-0 z-[200] h-[3px]">
-      <div
-        className="h-full bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 transition-none origin-left shadow-[0_0_8px_rgba(59,130,246,0.6)]"
-        style={{ width: `${progress}%` }}
-      />
-    </div>
-  )
+  return <div className="bl-progress" aria-hidden="true"><i ref={bar} style={{ transform: 'scaleX(0)' }} /></div>
 }
