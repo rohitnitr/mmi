@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
     .from('sessions')
     .select('id,user1_id,user2_id,start_time,end_time')
     .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
-    .neq('status', 'active')
     .order('start_time', { ascending: false })
     .limit(30)
   if (error) {

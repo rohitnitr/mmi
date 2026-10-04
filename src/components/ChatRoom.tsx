@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { getClient } from '@/lib/supabase/client'
+import SessionEvaluation from './SessionEvaluation'
 
 interface Message {
   id: string
@@ -35,6 +36,7 @@ export default function ChatRoom({ sessionId, userId, peerUserId, otherUsername,
   const [ending, setEnding] = useState(false)
   const [peerProfile, setPeerProfile] = useState<PeerProfile | null>(null)
   const [showPeerProfile, setShowPeerProfile] = useState(false)
+  const [evalOpen, setEvalOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -160,6 +162,13 @@ export default function ChatRoom({ sessionId, userId, peerUserId, otherUsername,
 
   return (
     <div className="inline-chat">
+      {evalOpen && (
+        <SessionEvaluation
+          sessionId={sessionId}
+          onClose={() => setEvalOpen(false)}
+          onDone={() => setEvalOpen(false)}
+        />
+      )}
       {/* Peer profile mini-card overlay */}
       {showPeerProfile && peerProfile && (
         <div className="peer-profile-overlay" onClick={() => setShowPeerProfile(false)}>
@@ -201,6 +210,7 @@ export default function ChatRoom({ sessionId, userId, peerUserId, otherUsername,
           </button>
           <span className="chat-peer-status"><span className="online-dot-sm" /> Mock Interview Session</span>
         </div>
+        <button className="chat-end-btn" style={{ background: 'transparent', color: '#2563EB', border: '1px solid #2563EB', marginRight: 8 }} onClick={() => setEvalOpen(true)} title="Rate your peer">⭐ Evaluate</button>
         <button className="chat-end-btn" onClick={handleEnd} disabled={ending}>
           {ending ? '…' : 'End Session'}
         </button>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import { DIMENSIONS, type Scores } from '@/lib/evaluation-config'
 
-type PendingItem = {
+export type PendingItem = {
   sessionId: string
   peerUsername: string
   startedAt: string
@@ -15,7 +15,7 @@ type SkillRow = { skill: string; rating_count: number; evaluator_count: number; 
 type RecentEval = { id: string; created_at: string; overall: number; strengths: string | null; improvements: string | null }
 type Received = { count: number; averages: Scores | null; recent: RecentEval[]; skills: SkillRow[] }
 
-async function authedFetch(path: string, init: RequestInit = {}): Promise<Response> {
+export async function authedFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const sb = getClient()
   if (!sb) throw new Error('Not connected. Refresh the page.')
   const { data } = await sb.auth.getSession()
@@ -47,7 +47,7 @@ function RatingRow({ label, hint, value, onChange }: { label: string; hint?: str
   )
 }
 
-function EvaluationForm({ item, onClose, onDone }: { item: PendingItem; onClose: () => void; onDone: () => void }) {
+export function EvaluationForm({ item, onClose, onDone, cancelLabel = 'Cancel' }: { item: PendingItem; onClose: () => void; onDone: () => void; cancelLabel?: string }) {
   const [scores, setScores] = useState<Partial<Scores>>({})
   const [skillRatings, setSkillRatings] = useState<Record<string, number>>({})
   const [strengths, setStrengths] = useState('')
@@ -97,17 +97,10 @@ function EvaluationForm({ item, onClose, onDone }: { item: PendingItem; onClose:
           <button type="button" className="ec-x" onClick={onClose} aria-label="Close">×</button>
         </div>
 
-        <div className="ec-section">
-          <h4>How did they do?</h4>
-          {DIMENSIONS.map(d => (
-            <RatingRow key={d.key} label={d.label} hint={d.hint} value={scores[d.key] ?? 0} onChange={n => setScores(s => ({ ...s, [d.key]: n }))} />
-          ))}
-        </div>
-
-        {item.skills.length > 0 && (
+        {item.skills.length > 0 ? (
           <div className="ec-section">
-            <h4>Skills you saw</h4>
-            <p className="ec-note">Rate only the skills that came up in the interview. Leave the rest blank.</p>
+            <h4>{item.peerUsername}&apos;s skills</h4>
+            <p className="ec-note">Rate the skills you saw in your conversation. Tap a score again to clear it.</p>
             {item.skills.map(skill => (
               <RatingRow
                 key={skill}
@@ -117,7 +110,19 @@ function EvaluationForm({ item, onClose, onDone }: { item: PendingItem; onClose:
               />
             ))}
           </div>
+        ) : (
+          <div className="ec-section">
+            <h4>Skills</h4>
+            <p className="ec-note">{item.peerUsername} has not added any skills to their profile yet.</p>
+          </div>
         )}
+
+        <div className="ec-section">
+          <h4>How did they do?</h4>
+          {DIMENSIONS.map(d => (
+            <RatingRow key={d.key} label={d.label} hint={d.hint} value={scores[d.key] ?? 0} onChange={n => setScores(s => ({ ...s, [d.key]: n }))} />
+          ))}
+        </div>
 
         <div className="ec-section">
           <label className="ec-field">
@@ -132,7 +137,7 @@ function EvaluationForm({ item, onClose, onDone }: { item: PendingItem; onClose:
 
         {err && <p className="ec-error" role="alert">{err}</p>}
         <div className="ec-actions">
-          <button type="button" className="ec-btn ec-btn-quiet" onClick={onClose}>Cancel</button>
+          <button type="button" className="ec-btn ec-btn-quiet" onClick={onClose}>{cancelLabel}</button>
           <button type="button" className="ec-btn ec-btn-main" disabled={!ready || busy} onClick={submit}>
             {busy ? 'Saving…' : 'Save evaluation'}
           </button>
@@ -244,7 +249,7 @@ export default function EvaluationCenter() {
   )
 }
 
-const CSS = `
+export const CSS = `
 .ec{--ec-accent:#2563EB;--ec-line:rgba(127,127,127,.28);--ec-soft:rgba(127,127,127,.08);margin-top:16px;padding:16px;border:1px solid var(--ec-line);border-radius:12px;text-align:left}
 .ec h3,.ec h4{margin:0}
 .ec-title{font-size:16px;font-weight:700;margin-bottom:10px!important}
