@@ -14,6 +14,7 @@ import ProfileModal from '@/components/ProfileModal'
 import PaymentModal from '@/components/PaymentModal'
 import InviteModal from '@/components/InviteModal'
 import GuestHomepage from '@/components/marketing/GuestHomepage'
+import ProfileEditor from '@/components/ProfileEditor'
 
 const ChatRoom = lazyLoad(() => import('@/components/ChatRoom'), { ssr: false })
 
@@ -61,6 +62,7 @@ export default function HomePage() {
   const [showAuth, setShowAuth] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const [showProEditor, setShowProEditor] = useState(false)
   const [inviteTarget, setInviteTarget] = useState<UserProfile | null>(null)
   const [sendingInvite, setSendingInvite] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
@@ -833,6 +835,10 @@ export default function HomePage() {
                     </div>
                   )}
                   <button className="btn btn-secondary w-full" onClick={() => setShowProfile(true)}>✏️ Edit Profile</button>
+                  <button className="btn btn-ghost w-full" onClick={() => setShowProEditor(true)}>💼 Professional Profile</button>
+                  {showProEditor && getClient() && (
+                    <ProfileEditor supabase={getClient()!} userId={authUser.id} username={profile.username} onClose={() => setShowProEditor(false)} />
+                  )}
                   <button className="btn btn-danger w-full" onClick={handleLogout}>Sign Out</button>
                 </div>
               </div>
