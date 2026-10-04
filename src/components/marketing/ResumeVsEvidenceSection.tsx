@@ -1,6 +1,6 @@
 'use client'
 
-import { PreviewBadge, Reveal, SectionHeader } from './shared'
+import { CountUp, Meter, PreviewBadge, Reveal, SectionHeader } from './shared'
 
 const claims = [['SQL', 'Advanced'], ['Python', 'Advanced'], ['Communication', 'Excellent'], ['Problem Solving', 'Strong']]
 const proof = [
@@ -31,8 +31,8 @@ export default function ResumeVsEvidenceSection() {
               <h3 style={{ color: '#2563EB' }}>MMI profile <PreviewBadge label="Example" /></h3>
               {proof.map(([s, v, st, m]) => (
                 <div className="mh-sr" key={s}>
-                  <div><b>{s}</b><p className="m">{m}</p></div>
-                  <div style={{ textAlign: 'right' }}><span className="mh-score">{v} / 5</span><p className="mh-ok">{st}</p></div>
+                  <div style={{ flex: 1, minWidth: 0 }}><b>{s}</b><p className="m">{m}</p><div style={{ maxWidth: 220, marginTop: 6 }}><Meter value={parseFloat(v) * 20} /></div></div>
+                  <div style={{ textAlign: 'right' }}><span className="mh-score"><CountUp to={parseFloat(v)} decimals={1} /> / 5</span><p className="mh-ok">{st}</p></div>
                 </div>
               ))}
             </div>

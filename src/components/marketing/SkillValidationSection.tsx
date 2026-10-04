@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useInView, useReducedMotion } from 'framer-motion'
 import { RotateCcw } from 'lucide-react'
-import { PreviewBadge, SectionHeader } from './shared'
+import { CountUp, PreviewBadge, SectionHeader } from './shared'
 
 const stages = [['Self-declared', 'You list the skill'], ['Interviewed', 'A peer asks about it'], ['Peer evaluated', 'Feedback is recorded'], ['Peer validated', 'Evidence accumulates']]
 
@@ -34,8 +34,9 @@ export default function SkillValidationSection() {
               <div key={a} className={`mh-stage${stage >= k ? ' on' : ''}`}>{a}<small>{b}</small></div>
             ))}
           </div>
+          <div className="mh-ladbar"><i style={{ width: `${(stage / 3) * 100}%` }} /></div>
           <div className="mh-big" style={{ opacity: stage === 3 ? 1 : 0.35, transition: 'opacity .5s' }}>
-            <strong>4.6 / 5</strong>
+            <strong>{stage === 3 ? <CountUp to={4.6} decimals={1} /> : '0.0'} / 5</strong>
             <span>SQL · 12 evaluations · 8 independent peers</span>
           </div>
           {!reduce && <button className="mh-btn mh-btn-glass mh-btn-sm" style={{ marginTop: 18 }} onClick={() => setS(0)}><RotateCcw size={15} aria-hidden="true" /> Replay</button>}

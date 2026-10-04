@@ -13,7 +13,6 @@ import ProfileSetupModal from '@/components/ProfileSetupModal'
 import ProfileModal from '@/components/ProfileModal'
 import PaymentModal from '@/components/PaymentModal'
 import InviteModal from '@/components/InviteModal'
-import MarketingNav from '@/components/marketing/MarketingNav'
 import GuestHomepage from '@/components/marketing/GuestHomepage'
 
 const ChatRoom = lazyLoad(() => import('@/components/ChatRoom'), { ssr: false })
@@ -436,7 +435,6 @@ export default function HomePage() {
 
       {/* ─── HEADER / NAV ─── */}
       {!authUser ? (
-        <MarketingNav onAuth={() => setShowAuth(true)} />
       ) : (
         <header className="header">
           <div className="header-inner container">

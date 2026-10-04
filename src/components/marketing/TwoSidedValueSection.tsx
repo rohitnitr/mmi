@@ -1,7 +1,7 @@
 'use client'
 
 import { Check } from 'lucide-react'
-import { GlowCard, Reveal, SectionHeader } from './shared'
+import { GlowCard, Reveal, SectionHeader, StaggerItem } from './shared'
 
 const sides = [
   { t: 'As a candidate', p: ['Practice answering', 'Demonstrate your skills', 'Receive peer feedback', 'Build evidence', 'Improve your portfolio'] },
@@ -15,11 +15,15 @@ export default function TwoSidedValueSection() {
         <SectionHeader eyebrow="Both sides" title="Build your portfolio from both sides of the interview." />
         <div className="mh-two">
           {sides.map((s, k) => (
-            <Reveal key={s.t} delay={k * 0.08}>
+            <Reveal key={s.t} delay={k * 0.1}>
               <GlowCard>
                 <h3 className="mh-h3">{s.t}</h3>
                 <ul className="mh-list" style={{ marginTop: 8 }}>
-                  {s.p.map((x) => <li key={x} style={{ fontSize: 16 }}><span className="mh-tick-ico"><Check size={15} aria-hidden="true" /></span>{x}</li>)}
+                  {s.p.map((x, n) => (
+                    <StaggerItem key={x} i={n}>
+                      <span className="mh-tick-ico"><Check size={15} aria-hidden="true" /></span>{x}
+                    </StaggerItem>
+                  ))}
                 </ul>
               </GlowCard>
             </Reveal>

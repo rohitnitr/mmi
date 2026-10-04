@@ -1,7 +1,7 @@
 'use client'
 
 import { Check } from 'lucide-react'
-import { Meter, PreviewBadge, Reveal, SectionHeader } from './shared'
+import { CountUp, Meter, PreviewBadge, Reveal, SectionHeader } from './shared'
 
 const parts = ['Name and photo', 'Username', 'Professional headline', 'Target role', 'About', 'Skills', 'Peer-validated skills', 'Interview history', 'Peer feedback', 'Achievements', 'MMI score and reputation', 'Education', 'Experience', 'Projects', 'LinkedIn and GitHub']
 
@@ -19,7 +19,7 @@ export default function PortfolioPreviewSection() {
                 <div><p className="mh-num" style={{ fontSize: 18 }}>Sample Profile</p><p className="mh-small">Software Engineer · @sampleprofile</p></div>
               </div>
               <p className="mh-small" style={{ marginTop: 12 }}>Building skills through real peer interviews.</p>
-              <div className="mh-stats"><div><b>842</b><span>MMI score</span></div><div><b>18</b><span>Interviews</span></div></div>
+              <div className="mh-stats"><div><b><CountUp to={842} /></b><span>MMI score</span></div><div><b><CountUp to={18} /></b><span>Interviews</span></div></div>
               <Meter label="React  4.6 ★" value={92} />
               <Meter label="Node.js  4.4 ★" value={88} />
               <Meter label="System Design  4.7 ★" value={94} />

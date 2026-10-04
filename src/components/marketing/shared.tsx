@@ -1,7 +1,7 @@
 'use client'
 
-import type { ReactNode, MouseEvent } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { useEffect, useRef, useState, type ReactNode, type MouseEvent } from 'react'
+import { animate, motion, useInView, useReducedMotion } from 'framer-motion'
 
 export type CtaProps = { onAuth: () => void }
 
@@ -63,11 +63,41 @@ export function Waveform({ bars = 30 }: { bars?: number }) {
   )
 }
 
-export function Meter({ label, value }: { label: string; value: number }) {
+export function Meter({ label, value }: { label?: string; value: number }) {
+  const reduce = useReducedMotion()
   return (
     <div className="mh-meter">
-      <div className="mh-meter-top"><span>{label}</span></div>
-      <div className="mh-meter-bar"><i style={{ width: `${value}%` }} /></div>
+      {label && <div className="mh-meter-top"><span>{label}</span></div>}
+      <div className="mh-meter-bar">
+        {reduce ? (
+          <i style={{ width: `${value}%` }} />
+        ) : (
+          <motion.i initial={{ width: 0 }} whileInView={{ width: `${value}%` }} viewport={{ once: true }} transition={{ duration: 0.9, ease: 'easeOut' }} />
+        )}
+      </div>
     </div>
+  )
+}
+
+export function CountUp({ to, decimals = 0, duration = 1.2 }: { to: number; decimals?: number; duration?: number }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const inView = useInView(ref, { once: true })
+  const reduce = useReducedMotion()
+  const [v, setV] = useState(0)
+  useEffect(() => {
+    if (!inView || reduce) return
+    const c = animate(0, to, { duration, ease: 'easeOut', onUpdate: setV })
+    return () => c.stop()
+  }, [inView, reduce, to, duration])
+  return <span ref={ref}>{(reduce ? to : v).toFixed(decimals)}</span>
+}
+
+export function StaggerItem({ children, i = 0 }: { children: ReactNode; i?: number }) {
+  const reduce = useReducedMotion()
+  if (reduce) return <li>{children}</li>
+  return (
+    <motion.li initial={{ opacity: 0, x: -14 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.4, delay: i * 0.08 }}>
+      {children}
+    </motion.li>
   )
 }

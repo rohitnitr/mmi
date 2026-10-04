@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Award, FileText, Mic, Search, UserPlus, Share2 } from 'lucide-react'
-import { Meter, PreviewBadge, SectionHeader, StatusBadge } from './shared'
+import { Meter, PreviewBadge, SectionHeader, StatusBadge, Waveform } from './shared'
 
 const steps = [
   { icon: UserPlus, n: '01', title: 'Build your professional profile', body: 'Name, photo, headline, target role, skills, projects and links.', status: 'partial' },
@@ -63,6 +63,7 @@ function Panel({ i }: { i: number }) {
     return (
       <div className="mh-mock">
         <p className="mh-bold">Two people. Two roles. One valuable session.</p>
+        <Waveform bars={34} />
         <RoleSwap />
       </div>
     )
