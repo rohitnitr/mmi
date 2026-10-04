@@ -178,6 +178,7 @@ export default function EvaluationCenter() {
     <section className="ec" aria-label="Peer evaluations">
       <style>{CSS}</style>
       <h3 className="ec-title">Peer evaluations</h3>
+<a href="/reports" style={{ fontSize: 13, marginLeft: 12, textDecoration: "underline" }}>View full reports →</a>
       {loading && <p className="ec-note">Loading…</p>}
       {error && <p className="ec-error" role="alert">{error}</p>}
       {notice && <p className="ec-ok" role="status">{notice}</p>}
