@@ -72,6 +72,7 @@ export default function HomePage() {
   const [selectedChat, setSelectedChat] = useState<Session | null>(null)
   const [unreadMap, setUnreadMap] = useState<Record<string, boolean>>({})   // sessionId -> has unread
   const [lastMsgMap, setLastMsgMap] = useState<Record<string, string>>({}) // sessionId -> preview text
+  const [lastMsgTimeMap, setLastMsgTimeMap] = useState<Record<string, number>>({}) // sessionId -> time of latest message (ms)
   // filter + pagination
   const [filterDomain, setFilterDomain] = useState('')
   const [filterExp, setFilterExp] = useState('')
@@ -240,7 +241,7 @@ export default function HomePage() {
       } else {
         setAuthUser(null); setProfile(null); setNeedsSetup(false)
         setSentInviteMap({}); setSessions([]); setSelectedChat(null)
-        setUnreadMap({}); setLastMsgMap({})
+        setUnreadMap({}); setLastMsgMap({}); setLastMsgTimeMap({})
         setAuthChecked(true)
       }
     }
@@ -289,6 +290,7 @@ export default function HomePage() {
     const ch4 = c.channel('rt-messages').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
       const sid = payload.new.session_id
       setLastMsgMap(prev => ({ ...prev, [sid]: payload.new.content }))
+      setLastMsgTimeMap(prev => ({ ...prev, [sid]: Date.parse(payload.new.created_at) || Date.now() }))
       // Mark unread only if this chat is not currently open
       setSelectedChat(cur => {
         if (!cur || cur.id !== sid) setUnreadMap(prev => ({ ...prev, [sid]: true }))
@@ -298,6 +300,29 @@ export default function HomePage() {
     const hb = setInterval(() => pingActive(authUser.id), 30_000)
     return () => { ch1.unsubscribe(); ch2.unsubscribe(); ch3.unsubscribe(); ch4.unsubscribe(); clearInterval(hb) }
   }, [authUser, sb, fetchUsers, fetchCoffeesShared, fetchInvites, fetchSession, pingActive])
+
+  // Latest message time per chat, so the Chats list can show the most recent conversation first
+  useEffect(() => {
+    const c = sb(); if (!c || sessions.length === 0) return
+    const ids = sessions.map(s => s.id)
+    c.from('messages')
+      .select('session_id, created_at')
+      .in('session_id', ids)
+      .order('created_at', { ascending: false })
+      .limit(500)
+      .then(({ data }: { data: { session_id: string; created_at: string }[] | null }) => {
+        if (!data) return
+        setLastMsgTimeMap(prev => {
+          const next = { ...prev }
+          for (const m of data) {
+            const t = Date.parse(m.created_at)
+            if (!t) continue
+            if (next[m.session_id] === undefined || next[m.session_id] < t) next[m.session_id] = t
+          }
+          return next
+        })
+      })
+  }, [sessions, sb])
 
   // ── Metrics poll for non-auth ─────────────────────────────────────────────
   useEffect(() => {
@@ -350,7 +375,7 @@ export default function HomePage() {
   const handleLogout = async () => {
     const c = sb(); if (c) await c.auth.signOut()
     setAuthUser(null); setProfile(null); setNeedsSetup(false)
-    setSentInviteMap({}); setSessions([]); setSelectedChat(null); setUnreadMap({}); setLastMsgMap({})
+    setSentInviteMap({}); setSessions([]); setSelectedChat(null); setUnreadMap({}); setLastMsgMap({}); setLastMsgTimeMap({})
     setShowProfile(false); setActiveTab('peers')
     window.location.href = '/'
   }
@@ -748,6 +773,7 @@ export default function HomePage() {
                     setSelectedChat(null)
                     setUnreadMap(prev => { const n = { ...prev }; delete n[selectedChat.id]; return n })
                     setLastMsgMap(prev => { const n = { ...prev }; delete n[selectedChat.id]; return n })
+                    setLastMsgTimeMap(prev => { const n = { ...prev }; delete n[selectedChat.id]; return n })
                     if (authUser) fetchProfile(authUser.id)
                     showToast('Session ended 👋')
                   }}
@@ -764,7 +790,7 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <div className="dm-list">
-                    {sessions.map(sess => {
+                    {[...sessions].sort((a, b) => (lastMsgTimeMap[b.id] || Date.parse(b.start_time) || 0) - (lastMsgTimeMap[a.id] || Date.parse(a.start_time) || 0)).map(sess => {
                       const hasUnread = !!unreadMap[sess.id]
                       const preview = lastMsgMap[sess.id]
                       return (

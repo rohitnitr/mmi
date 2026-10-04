@@ -77,7 +77,7 @@ export function EvaluationForm({ item, onClose, onDone, cancelLabel = 'Cancel' }
         }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Could not save your evaluation.')
+      if (!res.ok) throw new Error(json.detail ? `${json.error || 'Could not save your evaluation.'} (${json.detail})` : json.error || 'Could not save your evaluation.')
       onDone()
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not save your evaluation.')
@@ -137,12 +137,12 @@ export function EvaluationForm({ item, onClose, onDone, cancelLabel = 'Cancel' }
 
         {err && <p className="ec-error" role="alert">{err}</p>}
         <div className="ec-actions">
+          {!ready && <span className="ec-hint">Rate all five areas to save.</span>}
           <button type="button" className="ec-btn ec-btn-quiet" onClick={onClose}>{cancelLabel}</button>
           <button type="button" className="ec-btn ec-btn-main" disabled={!ready || busy} onClick={submit}>
             {busy ? 'Saving…' : 'Save evaluation'}
           </button>
         </div>
-        {!ready && <p className="ec-note ec-right">Rate all five areas to save.</p>}
       </div>
     </div>
   )
@@ -250,7 +250,8 @@ export default function EvaluationCenter() {
 }
 
 export const CSS = `
-.ec{--ec-accent:#2563EB;--ec-line:rgba(127,127,127,.28);--ec-soft:rgba(127,127,127,.08);margin-top:16px;padding:16px;border:1px solid var(--ec-line);border-radius:12px;text-align:left}
+.ec,.ec-overlay{--ec-accent:#2563EB;--ec-ok:#16a34a;--ec-line:rgba(127,127,127,.28);--ec-soft:rgba(127,127,127,.08)}
+.ec{margin-top:16px;padding:16px;border:1px solid var(--ec-line,rgba(127,127,127,.28));border-radius:12px;text-align:left}
 .ec h3,.ec h4{margin:0}
 .ec-title{font-size:16px;font-weight:700;margin-bottom:10px!important}
 .ec-block{margin-top:14px}
@@ -260,24 +261,24 @@ export const CSS = `
 .ec-error{font-size:13px;color:#dc2626;margin:8px 0}
 .ec-ok{font-size:13px;color:#16a34a;margin:8px 0}
 .ec-list,.ec-feed{list-style:none;margin:0;padding:0}
-.ec-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--ec-line);font-size:14px}
+.ec-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--ec-line,rgba(127,127,127,.28));font-size:14px}
 .ec-list em{font-style:normal;opacity:.6;font-size:12.5px;margin-left:6px}
 .ec-btn{border:0;border-radius:8px;padding:8px 14px;font-size:13.5px;font-weight:600;cursor:pointer;min-height:36px}
-.ec-btn-main{background:var(--ec-accent);color:#fff}
+.ec-btn-main{background:var(--ec-accent,#2563EB);color:#fff}
 .ec-btn-main:disabled{opacity:.45;cursor:not-allowed}
-.ec-btn-quiet{background:transparent;color:inherit;border:1px solid var(--ec-line)}
-.ec-btn:focus-visible,.ec-pip:focus-visible,.ec-x:focus-visible{outline:2px solid var(--ec-accent);outline-offset:2px}
+.ec-btn-quiet{background:transparent;color:inherit;border:1px solid var(--ec-line,rgba(127,127,127,.28))}
+.ec-btn:focus-visible,.ec-pip:focus-visible,.ec-x:focus-visible{outline:2px solid var(--ec-accent,#2563EB);outline-offset:2px}
 .ec-bar{display:grid;grid-template-columns:130px 1fr 32px;align-items:center;gap:8px;font-size:13px;margin:5px 0}
-.ec-track{height:6px;border-radius:99px;background:var(--ec-soft);overflow:hidden}
-.ec-fill{height:100%;background:var(--ec-accent);border-radius:99px;transition:width .5s ease}
+.ec-track{height:6px;border-radius:99px;background:var(--ec-soft,rgba(127,127,127,.08));overflow:hidden}
+.ec-fill{height:100%;background:var(--ec-accent,#2563EB);border-radius:99px;transition:width .5s ease}
 .ec-skills{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
-.ec-chip{font-size:12px;padding:4px 9px;border-radius:99px;border:1px solid var(--ec-line)}
+.ec-chip{font-size:12px;padding:4px 9px;border-radius:99px;border:1px solid var(--ec-line,rgba(127,127,127,.28))}
 .ec-chip.is-valid{border-color:#16a34a;color:#16a34a;font-weight:600}
-.ec-feed li{border-top:1px solid var(--ec-line);padding:9px 0;font-size:13.5px}
+.ec-feed li{border-top:1px solid var(--ec-line,rgba(127,127,127,.28));padding:9px 0;font-size:13.5px}
 .ec-feed p{margin:4px 0}
 .ec-feed-meta{font-size:12px;opacity:.65}
 .ec-overlay{position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px}
-.ec-modal{background:#fff;color:#0F172A;width:100%;max-width:560px;max-height:90vh;overflow:auto;border-radius:14px;padding:20px}
+.ec-modal{overscroll-behavior:contain;background:#fff;color:#0F172A;width:100%;max-width:560px;max-height:90vh;overflow:auto;border-radius:14px;padding:20px}
 .ec-modal h3{font-size:18px}
 .ec-modal p{margin:4px 0 0;font-size:13px;color:#475569}
 .ec-modal-head{display:flex;justify-content:space-between;gap:12px}
@@ -291,12 +292,13 @@ export const CSS = `
 .ec-row-hint{font-size:12px;color:#64748B}
 .ec-scale{display:flex;gap:6px}
 .ec-pip{width:38px;height:38px;border-radius:8px;border:1px solid #CBD5E1;background:#fff;color:#0F172A;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
-.ec-pip:hover{border-color:var(--ec-accent)}
-.ec-pip.is-on{background:var(--ec-accent);border-color:var(--ec-accent);color:#fff}
+.ec-pip:hover{border-color:var(--ec-accent,#2563EB)}
+.ec-pip.is-on{background:var(--ec-ok,#16a34a);border-color:var(--ec-ok,#16a34a);color:#fff}
 .ec-field{display:block;margin-top:10px}
 .ec-field span{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
 .ec-field textarea{width:100%;border:1px solid #CBD5E1;border-radius:8px;padding:8px 10px;font:inherit;font-size:14px;color:#0F172A;background:#fff;resize:vertical}
-.ec-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.ec-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;position:sticky;bottom:0;margin:16px -20px -20px;padding:12px 20px;background:#fff;border-top:1px solid #E2E8F0}
+.ec-hint{margin-right:auto;font-size:12.5px;color:#64748B}
 @media (max-width:480px){.ec-bar{grid-template-columns:100px 1fr 28px}}
 @media (prefers-reduced-motion:reduce){.ec-fill,.ec-pip{transition:none}}
 `

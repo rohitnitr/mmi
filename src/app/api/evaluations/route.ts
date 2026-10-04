@@ -21,6 +21,18 @@ const clean = (v: unknown, max: number): string | null => {
 
 // Submit an evaluation for a session you took part in.
 export async function POST(req: NextRequest) {
+  try {
+    return await handlePost(req)
+  } catch (e) {
+    console.error('[evaluations] unexpected error', e)
+    return NextResponse.json(
+      { error: 'Could not save your evaluation. Please try again.', detail: e instanceof Error ? e.message : String(e) },
+      { status: 500 }
+    )
+  }
+}
+
+async function handlePost(req: NextRequest) {
   const userId = await getAuthUserId(req)
   if (!userId) return NextResponse.json({ error: 'Please log in again.' }, { status: 401 })
 
@@ -92,7 +104,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You already evaluated this session.' }, { status: 409 })
     }
     console.error('[evaluations] insert failed', error?.message)
-    return NextResponse.json({ error: 'Could not save your evaluation. Please try again.' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not save your evaluation. Please try again.', detail: error?.message }, { status: 500 })
   }
 
   if (skillRows.length > 0) {
@@ -102,7 +114,7 @@ export async function POST(req: NextRequest) {
     if (skillErr) {
       console.error('[evaluations] skill insert failed', skillErr.message)
       await db.from('session_evaluations').delete().eq('id', ev.id) // keep it all-or-nothing
-      return NextResponse.json({ error: 'Could not save your evaluation. Please try again.' }, { status: 500 })
+      return NextResponse.json({ error: 'Could not save your evaluation. Please try again.', detail: skillErr.message }, { status: 500 })
     }
   }
 
