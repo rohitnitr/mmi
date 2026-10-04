@@ -8,11 +8,11 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 export const metadata: Metadata = {
   metadataBase: new URL('https://matchmyinterview.com'),
   title: {
-    default: 'MatchMyInterview — Practice Mock Interviews with Real Peers',
+    default: 'MatchMyInterview — The Peer-Validated Professional Portfolio',
     template: '%s | MatchMyInterview'
   },
-  description: 'A 100% free, peer-to-peer mock interview platform. Connect with real people, practice live, and land your dream job faster. No AI bots, just real humans.',
-  keywords: ['mock interview', 'interview practice', 'peer interview', 'software engineering interview', 'data analyst interview', 'placement preparation', 'free mock interviews'],
+  description: 'Practice with real people. Get interviewed. Receive peer feedback. Build a professional portfolio backed by real interview evidence.',
+  keywords: ['mock interview', 'interview practice', 'peer interview', 'skill validation', 'interview portfolio', 'software engineering interview', 'data analyst interview', 'free mock interviews'],
   authors: [{ name: 'MatchMyInterview Team' }],
   creator: 'MatchMyInterview',
   publisher: 'MatchMyInterview',

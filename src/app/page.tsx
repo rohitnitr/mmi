@@ -13,6 +13,8 @@ import ProfileSetupModal from '@/components/ProfileSetupModal'
 import ProfileModal from '@/components/ProfileModal'
 import PaymentModal from '@/components/PaymentModal'
 import InviteModal from '@/components/InviteModal'
+import MarketingNav from '@/components/marketing/MarketingNav'
+import GuestHomepage from '@/components/marketing/GuestHomepage'
 
 const ChatRoom = lazyLoad(() => import('@/components/ChatRoom'), { ssr: false })
 
@@ -432,28 +434,32 @@ export default function HomePage() {
           onClose={() => setInviteTarget(null)} sending={sendingInvite} />
       )}
 
-      {/* ─── HEADER ─── */}
-      <header className="header">
-        <div className="header-inner container">
-          <div className="logo" style={{ cursor: 'default' }}>
-            <img src="/logo.png" alt="MatchMyInterview logo" className="logo-img" />
-            <span className="logo-text">MatchMyInterview</span>
+      {/* ─── HEADER / NAV ─── */}
+      {!authUser ? (
+        <MarketingNav onAuth={() => setShowAuth(true)} />
+      ) : (
+        <header className="header">
+          <div className="header-inner container">
+            <div className="logo" style={{ cursor: 'default' }}>
+              <img src="/logo.png" alt="MatchMyInterview logo" className="logo-img" />
+              <span className="logo-text">MatchMyInterview</span>
+            </div>
+            <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <a href="/blog" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors" style={{ textDecoration: 'none' }}>Blog</a>
+              {profile ? (
+                <>
+                  <button className="coffee-badge" onClick={() => setShowPayment(true)}>☕ ∞</button>
+                  <button className="header-avatar" onClick={() => setActiveTab('profile')} title="Your profile">
+                    {(profile.username || 'U').slice(0, 2).toUpperCase()}
+                  </button>
+                </>
+              ) : (
+                <button className="btn btn-primary btn-sm" onClick={() => setShowAuth(true)}>Get Started →</button>
+              )}
+            </div>
           </div>
-          <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <a href="/blog" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors" style={{ textDecoration: 'none' }}>Blog</a>
-            {profile ? (
-              <>
-                <button className="coffee-badge" onClick={() => setShowPayment(true)}>☕ ∞</button>
-                <button className="header-avatar" onClick={() => setActiveTab('profile')} title="Your profile">
-                  {(profile.username || 'U').slice(0, 2).toUpperCase()}
-                </button>
-              </>
-            ) : (
-              <button className="btn btn-primary btn-sm" onClick={() => setShowAuth(true)}>Get Started →</button>
-            )}
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* ─── TAB NAV (logged-in only, desktop) ─── */}
       {authUser && profile && (
@@ -471,41 +477,16 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ─── HERO (non-auth) ─── */}
-      {!authUser && (
-        <section className="hero">
-          <div className="hero-container container">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="hero-badge">
-              <Sparkles size={14} className="text-blue-500" /> 100% Free · Email Verified Community
-            </motion.div>
-            
-            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="hero-title">
-              Offer a Peer a Coffee<br />
-              <span className="hero-accent">Practice Interviews Together</span>
-            </motion.h1>
-            
-            <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="hero-subtitle">
-              Stop practicing with AI bots. Connect with real peers, run mock interviews, and land your dream job faster.
-            </motion.p>
-            
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="hero-actions">
-              <button className="btn btn-primary btn-lg" onClick={() => setShowAuth(true)}>
-                Start Practicing <ChevronRight size={18} />
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Star key={i} size={14} fill="#F59E0B" color="#F59E0B" />
-                  ))}
-                </div>
-                <span className="hero-note">Loved by 500+ candidates</span>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-      )}
-
-      <main className={`main container${authUser ? ' has-bottom-nav' : ''}`}>
+      {/* ─── MAIN / GUEST HOMEPAGE ─── */}
+      {!authUser ? (
+        <GuestHomepage
+          onAuth={() => setShowAuth(true)}
+          users={users}
+          onlineCount={onlineCount}
+          coffeesShared={coffeesShared}
+        />
+      ) : (
+        <main className="main container has-bottom-nav">
 
         {/* ─── METRICS (always visible) ─── */}
         <section className="metrics-section">
@@ -862,26 +843,8 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* ─── HOW IT WORKS (non-auth) ─── */}
-        {!authUser && (
-          <section className="how-section">
-            <h2 className="section-title centered">How It Works</h2>
-            <div className="steps-grid">
-              {[
-                { n: 1, t: 'Sign Up Free', d: 'Verify your email in seconds. Unlimited invites, no card needed.' },
-                { n: 2, t: 'Offer a Coffee', d: 'Find a peer and offer them a coffee to practice together.' },
-                { n: 3, t: 'Practice Together', d: 'Chat with your match. Take turns as interviewer and candidate.' },
-              ].map(s => (
-                <div key={s.n} className="step">
-                  <div className="step-num">{s.n}</div>
-                  <h3 className="step-title">{s.t}</h3>
-                  <p className="step-desc">{s.d}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
       </main>
+      )}
 
       {/* ─── BOTTOM NAV (mobile, logged-in) ─── */}
       {authUser && profile && (
@@ -904,64 +867,7 @@ export default function HomePage() {
           </button>
         </nav>
       )}
-
-      {!authUser && (
-        <>
-          {/* ─── TRUST & CTA (non-auth) ─── */}
-          <section className="cta-section" style={{ padding: '80px 0', background: 'var(--gray-900)', color: 'var(--white)', textAlign: 'center', marginTop: '60px' }}>
-            <div className="container">
-              <h2 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, marginBottom: 16, letterSpacing: '-1px' }}>Ready to ace your next interview?</h2>
-              <p style={{ fontSize: 18, color: 'var(--gray-400)', marginBottom: 32, maxWidth: 600, margin: '0 auto 32px' }}>Join hundreds of students and professionals practicing daily. Build confidence, refine your answers, and get hired.</p>
-              <button className="btn btn-primary btn-lg" onClick={() => setShowAuth(true)} style={{ background: 'var(--white)', color: 'var(--gray-900)' }}>
-                Create Free Account
-              </button>
-              <p style={{ fontSize: 13, color: 'var(--gray-500)', marginTop: 16 }}>Takes 30 seconds. No credit card required.</p>
-            </div>
-          </section>
-
-          <footer className="footer" style={{ borderTop: 'none', background: 'var(--gray-50)' }}>
-            <div className="container footer-inner">
-              <div className="footer-brand">
-                <span className="footer-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <img src="/logo.png" alt="MatchMyInterview logo" style={{ width: 28, height: 28, borderRadius: 6 }} /> 
-                  MatchMyInterview
-                </span>
-                <span className="footer-note">The premium mock interview platform for ambitious candidates.</span>
-                
-                <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                  <a href="https://twitter.com/matchmyintervew" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gray-500)' }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
-                  </a>
-                  <a href="https://linkedin.com/company/matchmyinterview" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gray-500)' }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
-                  </a>
-                  <a href="https://instagram.com/matchmyinterview" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gray-500)' }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
-                  </a>
-                  <a href="https://youtube.com/@matchmyinterview" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gray-500)' }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>
-                  </a>
-                </div>
-              </div>
-              <nav className="footer-links">
-                <a href="/about">About</a>
-                <a href="/contact">Contact</a>
-                <a href="/privacy">Privacy</a>
-                <a href="/terms">Terms</a>
-                <a href="/sitemap.xml">Sitemap</a>
-              </nav>
-            </div>
-            <div className="container" style={{ textAlign: 'center', marginTop: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-              <a href="https://www.betterlaunch.co" target="_blank" rel="noopener noreferrer">
-                <img src="https://www.betterlaunch.co/badge.svg" alt="Featured on Better Launch" style={{ width: 160, height: 'auto' }} />
-              </a>
-              <p style={{ fontSize: 12, color: 'var(--gray-400)', margin: 0 }}>
-                &copy; {new Date().getFullYear()} MatchMyInterview. All rights reserved.
-              </p>
-            </div>
-          </footer>
-        </>
-      )}
     </div>
   )
 }
+
