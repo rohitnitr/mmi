@@ -49,7 +49,6 @@ export default function ProfileModal({ profile, onClose, onUpdate, onLogout }: P
           ) : (
             <h2 className="profile-name">{profile.username}</h2>
           )}
-          <div className="profile-coffee-badge">☕ {profile.coffee_balance} coffees</div>
         </div>
 
         {/* Profile Fields */}

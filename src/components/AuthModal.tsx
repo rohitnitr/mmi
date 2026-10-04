@@ -158,7 +158,6 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         )}
 
         {error && <p className="form-error">{error}</p>}
-        <p className="modal-note">🎁 You get 1 free coffee on signup!</p>
       </div>
     </div>
   )

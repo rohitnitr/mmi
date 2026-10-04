@@ -472,7 +472,6 @@ export default function HomePage() {
               <a href="/blog" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors" style={{ textDecoration: 'none' }}>Blog</a>
               {profile ? (
                 <>
-                  <button className="coffee-badge" onClick={() => setShowPayment(true)}>☕ ∞</button>
                   <button className="header-avatar" onClick={() => setActiveTab('profile')} title="Your profile">
                     {(profile.username || 'U').slice(0, 2).toUpperCase()}
                   </button>
@@ -544,11 +543,11 @@ export default function HomePage() {
               <div className="ticker-wrap" style={{ flex: 1, overflow: 'hidden', position: 'relative', WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent)' }}>
                 <div className="ticker" style={{ display: 'flex', gap: 32, whiteSpace: 'nowrap', animation: 'ticker 25s linear infinite' }}>
                   <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>🎉 Rahul (SDE) just completed a mock interview</span>
-                  <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>☕ Priya offered a coffee to Amit</span>
+                  <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>Example: Priya invited Amit to a mock interview</span>
                   <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>⭐ Sneha (Data Analyst) joined the community</span>
                   <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>🚀 Vikram is practicing for an upcoming FAANG interview</span>
                   <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>🎉 Rahul (SDE) just completed a mock interview</span>
-                  <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>☕ Priya offered a coffee to Amit</span>
+                  <span style={{ fontSize: 13, color: 'var(--gray-700)' }}>Example: Priya invited Amit to a mock interview</span>
                 </div>
               </div>
             </motion.div>
@@ -720,7 +719,7 @@ export default function HomePage() {
               <div className="empty-state">
                 <p className="empty-icon">🔔</p>
                 <p className="empty-title">No pending requests</p>
-                <p className="empty-subtitle">When someone offers you a coffee, it'll appear here.</p>
+                <p className="empty-subtitle">When someone invites you to a mock interview, it will appear here.</p>
               </div>
             ) : (
               <div className="invites-list">
@@ -786,7 +785,7 @@ export default function HomePage() {
                   <div className="empty-state">
                     <p className="empty-icon">💬</p>
                     <p className="empty-title">No chats yet</p>
-                    <p className="empty-subtitle">Accept a coffee invite to start a mock interview session.</p>
+                    <p className="empty-subtitle">Accept an invite to start a mock interview session.</p>
                   </div>
                 ) : (
                   <div className="dm-list">
@@ -828,10 +827,6 @@ export default function HomePage() {
                 <div className="profile-page-avatar">{(profile.username || 'U').slice(0, 2).toUpperCase()}</div>
                 <h2 className="profile-page-name">{profile.username}</h2>
                 <p className="profile-page-email">{authUser.email || profile.email || '—'}</p>
-                <div className="profile-coffee-row">
-                  <span className="profile-coffee-count">☕ ∞</span>
-                  <span className="profile-coffee-label">Unlimited Coffee</span>
-                </div>
               </div>
               <div className="profile-page-card">
                 <div className="profile-fields">
