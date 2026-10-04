@@ -114,7 +114,7 @@ export function ProgressPanel() {
       </section>
 
       <p style={{ marginTop: 20, fontSize: 14 }}>
-        <Link href="/leaderboard">See the leaderboard</Link> · <Link href="/reports">Your interview reports</Link>
+        <Link href="/leaderboard">See the leaderboard</Link> · <Link href="/talent">Browse talent</Link> · <Link href="/reports">Your interview reports</Link>
       </p>
     </main>
   )
