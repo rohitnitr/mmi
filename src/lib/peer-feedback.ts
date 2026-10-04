@@ -7,6 +7,7 @@ export type SkillFeedback = {
   avg: number;
   ratings: number;
   peers: number;
+  validated: boolean;
 };
 
 export type PeerFeedback = {
@@ -44,7 +45,7 @@ export async function getPeerFeedback(admin: any, userId: string): Promise<PeerF
       .order("created_at", { ascending: false }),
     admin
       .from("skill_validations")
-      .select("skill, rating_count, evaluator_count, avg_rating")
+      .select("skill, rating_count, evaluator_count, avg_rating, is_validated")
       .eq("evaluatee_id", userId)
       .order("avg_rating", { ascending: false }),
   ]);
@@ -65,6 +66,7 @@ export async function getPeerFeedback(admin: any, userId: string): Promise<PeerF
     avg: Number(s.avg_rating),
     ratings: Number(s.rating_count),
     peers: Number(s.evaluator_count),
+    validated: s.is_validated === true && Number(s.evaluator_count) >= 3,
   }));
 
   const comments = evals

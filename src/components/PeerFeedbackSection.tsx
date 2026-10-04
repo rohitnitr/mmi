@@ -44,7 +44,7 @@ export default function PeerFeedbackSection({ data }: { data: PeerFeedback }) {
             {skills.map((s) => (
               <div key={s.skill}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4 }}>
-                  <strong>{s.skill}</strong>
+                  <strong>{s.skill}{s.validated ? <span style={{ marginLeft: 8, fontSize: 11, color: "#16a34a" }}>✓ Validated by peers</span> : null}</strong>
                   <span>
                     {s.avg.toFixed(1)} / 5{" "}
                     <span style={muted}>
