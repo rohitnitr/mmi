@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import { DIMENSIONS, type Scores } from '@/lib/evaluation-config'
+import { ProgressChip } from '@/components/ProgressViews'
 
 export type PendingItem = {
   sessionId: string
@@ -179,6 +180,7 @@ export default function EvaluationCenter() {
       <style>{CSS}</style>
       <h3 className="ec-title">Peer evaluations</h3>
 <a href="/reports" style={{ fontSize: 13, marginLeft: 12, textDecoration: "underline" }}>View full reports →</a>
+<ProgressChip />
       {loading && <p className="ec-note">Loading…</p>}
       {error && <p className="ec-error" role="alert">{error}</p>}
       {notice && <p className="ec-ok" role="status">{notice}</p>}
