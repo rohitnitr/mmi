@@ -7,7 +7,7 @@ function generateUsername() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, email, experience, domain, target_role } = await req.json()
+    const { userId, experience, domain, target_role } = await req.json()
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
 
     const db = getSupabaseAdmin()
@@ -15,11 +15,6 @@ export async function POST(req: NextRequest) {
     // Return existing profile if present (update email if missing)
     const { data: existing } = await db.from('users').select('*').eq('id', userId).maybeSingle()
     if (existing) {
-      // Backfill email if not stored yet
-      if (email && !existing.email) {
-        await db.from('users').update({ email }).eq('id', userId)
-        return NextResponse.json({ user: { ...existing, email } })
-      }
       return NextResponse.json({ user: existing })
     }
 
@@ -36,7 +31,6 @@ export async function POST(req: NextRequest) {
       .insert({
         id: userId,
         username,
-        email: email || null,
         experience: experience || 'Fresher',
         domain: domain || 'Software / IT',
         target_role: target_role || '',
