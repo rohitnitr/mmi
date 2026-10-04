@@ -6,6 +6,7 @@ import '@/components/marketing/marketing.css'
 import '@/components/marketing/marketing-v2.css'
 import { Logo } from '@/components/marketing/Brand'
 import type { EducationRow, ProfileRow, ProjectRow, SkillRow } from '@/lib/profile'
+import PeerFeedbackLoader from "@/components/PeerFeedbackLoader";
 
 export const revalidate = 60
 
@@ -117,7 +118,8 @@ export default async function PublicProfile({ params }: { params: Promise<{ user
             ))}
           </section>
         )}
-      </main>
+      <PeerFeedbackLoader params={params} />
+</main>
     </div>
   )
 }
