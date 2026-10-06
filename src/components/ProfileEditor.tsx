@@ -7,16 +7,32 @@ import {
   MAX, cleanUrl, computeCompletion,
   type EducationRow, type ProfileRow, type ProjectRow, type SkillRow, type UserSkillRow,
 } from '@/lib/profile'
+import { DOMAIN_OPTIONS, EXPERIENCE_OPTIONS } from '@/lib/career-options'
 
-type Props = { supabase: SupabaseClient; userId: string; username: string; onClose: () => void }
+type Career = { experience: string; domain: string; target_role: string }
+type Props = {
+  supabase: SupabaseClient
+  userId: string
+  username: string
+  career: Career
+  authMeta?: Record<string, unknown> | null
+  onProfileUpdate?: (p: Career & { username: string }) => void
+  onSaved?: () => void
+  onClose: () => void
+}
 type Msg = { type: 'ok' | 'err'; text: string } | null
 const LEVELS = ['Beginner', 'Intermediate', 'Advanced'] as const
-
 const blank = { displayName: '', headline: '', bio: '', location: '', linkedin: '', github: '', website: '', avatar: '', isPublic: false }
+const str = (v: unknown) => (typeof v === 'string' ? v : '')
 
-export default function ProfileEditor({ supabase, userId, username, onClose }: Props) {
+export default function ProfileEditor({ supabase, userId, username, career, authMeta, onProfileUpdate, onSaved, onClose }: Props) {
+  const gName = str(authMeta?.full_name) || str(authMeta?.name)
+  const gPhotoRaw = str(authMeta?.avatar_url) || str(authMeta?.picture)
+  const gPhoto = gPhotoRaw.startsWith('https://') && gPhotoRaw.length <= 400 ? gPhotoRaw : ''
+
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState(blank)
+  const [cf, setCf] = useState({ username, experience: career.experience, domain: career.domain, target_role: career.target_role })
   const [catalog, setCatalog] = useState<SkillRow[]>([])
   const [mine, setMine] = useState<UserSkillRow[]>([])
   const [projects, setProjects] = useState<ProjectRow[]>([])
@@ -50,7 +66,7 @@ export default function ProfileEditor({ supabase, userId, username, onClose }: P
       setMine((us.data ?? []) as UserSkillRow[])
       setProjects((pr.data ?? []) as ProjectRow[])
       setEducation((ed.data ?? []) as EducationRow[])
-      if (p.error || s.error) setMsg({ type: 'err', text: 'Could not load everything. Has the Sprint 3 migration been run?' })
+      if (p.error || s.error) setMsg({ type: 'err', text: 'Could not load everything. Please refresh and try again.' })
       setLoading(false)
     })()
     return () => { alive = false }
@@ -60,31 +76,59 @@ export default function ProfileEditor({ supabase, userId, username, onClose }: P
   const fail = (text: string) => setMsg({ type: 'err', text })
   const ok = (text: string) => setMsg({ type: 'ok', text })
 
+  // Name and photo come from the Google account automatically; manual entry only appears if neither exists.
+  const effName = form.displayName.trim() || gName
+  const effPhoto = form.avatar || gPhoto
   const completion = computeCompletion({
-    avatar: form.avatar, displayName: form.displayName, headline: form.headline, bio: form.bio, location: form.location,
+    avatar: effPhoto, displayName: effName, headline: form.headline, bio: form.bio, location: form.location,
     linkedin: form.linkedin, github: form.github, skills: mine.length, projects: projects.length, education: education.length,
   })
 
-  async function saveBasics() {
+  async function saveAll() {
     const li = cleanUrl(form.linkedin), gh = cleanUrl(form.github), web = cleanUrl(form.website)
     if (!li.ok || !gh.ok || !web.ok) return fail('One of your links is not a valid URL.')
     if (form.headline.length > 120) return fail('Headline must be 120 characters or fewer.')
     if (form.bio.length > 800) return fail('Bio must be 800 characters or fewer.')
+    const newName = cf.username.trim()
+    if (newName !== username && !/^[A-Za-z0-9_]{3,24}$/.test(newName)) return fail('Username must be 3 to 24 letters, numbers or underscores.')
     setSaving(true)
+
+    const careerChanged = newName !== username || cf.experience !== career.experience || cf.domain !== career.domain || cf.target_role.trim() !== career.target_role
+    if (careerChanged) {
+      try {
+        const res = await fetch('/api/users', {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, username: newName, experience: cf.experience, domain: cf.domain, target_role: cf.target_role.trim() }),
+        })
+        const data = (await res.json()) as { error?: string; user?: Partial<Career> & { username?: string } }
+        if (!res.ok) { setSaving(false); return fail(data.error || 'Could not save your career details.') }
+        onProfileUpdate?.({
+          username: data.user?.username ?? newName,
+          experience: data.user?.experience ?? cf.experience,
+          domain: data.user?.domain ?? cf.domain,
+          target_role: data.user?.target_role ?? cf.target_role.trim(),
+        })
+      } catch {
+        setSaving(false)
+        return fail('Network problem. Please try again.')
+      }
+    }
+
     const { error } = await supabase.from('profiles').upsert({
       user_id: userId,
-      display_name: form.displayName.trim() || null,
+      display_name: effName || null,
       headline: form.headline.trim() || null,
       bio: form.bio.trim() || null,
       location: form.location.trim() || null,
       linkedin_url: li.value, github_url: gh.value, website_url: web.value,
-      avatar_url: form.avatar || null,
+      avatar_url: effPhoto || null,
       is_public: form.isPublic,
     }, { onConflict: 'user_id' })
     setSaving(false)
     if (error) return fail(error.message)
-    setForm((f) => ({ ...f, linkedin: li.value ?? '', github: gh.value ?? '', website: web.value ?? '' }))
-    ok('Profile saved.')
+    setForm((f) => ({ ...f, displayName: effName, avatar: effPhoto, linkedin: li.value ?? '', github: gh.value ?? '', website: web.value ?? '' }))
+    ok('Saved.')
+    onSaved?.()
   }
 
   async function onAvatar(e: ChangeEvent<HTMLInputElement>) {
@@ -101,6 +145,7 @@ export default function ProfileEditor({ supabase, userId, username, onClose }: P
     if (error) return fail(error.message)
     set('avatar', url)
     ok('Photo updated.')
+    onSaved?.()
   }
 
   async function addSkill(s: SkillRow) {
@@ -109,17 +154,20 @@ export default function ProfileEditor({ supabase, userId, username, onClose }: P
     if (error) return fail(error.message)
     setMine((m) => [...m, { skill_id: s.id, self_level: null }])
     setQ('')
+    onSaved?.()
   }
   async function removeSkill(id: string) {
     const { error } = await supabase.from('user_skills').delete().eq('user_id', userId).eq('skill_id', id)
     if (error) return fail(error.message)
     setMine((m) => m.filter((x) => x.skill_id !== id))
+    onSaved?.()
   }
   async function setLevel(id: string, level: string) {
     const v = (LEVELS as readonly string[]).includes(level) ? (level as UserSkillRow['self_level']) : null
     const { error } = await supabase.from('user_skills').update({ self_level: v }).eq('user_id', userId).eq('skill_id', id)
     if (error) return fail(error.message)
     setMine((m) => m.map((x) => (x.skill_id === id ? { ...x, self_level: v } : x)))
+    onSaved?.()
   }
 
   async function addProject() {
@@ -133,11 +181,13 @@ export default function ProfileEditor({ supabase, userId, username, onClose }: P
     if (error) return fail(error.message)
     setProjects((p) => [...p, data as ProjectRow])
     setProj({ title: '', url: '', description: '' })
+    onSaved?.()
   }
   async function removeProject(id: string) {
     const { error } = await supabase.from('user_projects').delete().eq('id', id)
     if (error) return fail(error.message)
     setProjects((p) => p.filter((x) => x.id !== id))
+    onSaved?.()
   }
 
   async function addEducation() {
@@ -150,22 +200,26 @@ export default function ProfileEditor({ supabase, userId, username, onClose }: P
     if (error) return fail(error.message)
     setEducation((p) => [...p, data as EducationRow])
     setEdu({ institution: '', degree: '', field: '', start: '', end: '' })
+    onSaved?.()
   }
   async function removeEducation(id: string) {
     const { error } = await supabase.from('user_education').delete().eq('id', id)
     if (error) return fail(error.message)
     setEducation((p) => p.filter((x) => x.id !== id))
+    onSaved?.()
   }
 
   const chosen = new Set(mine.map((m) => m.skill_id))
   const nameOf = (id: string) => catalog.find((c) => c.id === id)?.name ?? 'Skill'
   const results = q.trim() ? catalog.filter((c) => !chosen.has(c.id) && c.name.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 10) : []
+  const expOptions = EXPERIENCE_OPTIONS.includes(cf.experience) ? EXPERIENCE_OPTIONS : [cf.experience, ...EXPERIENCE_OPTIONS]
+  const domOptions = DOMAIN_OPTIONS.includes(cf.domain) ? DOMAIN_OPTIONS : [cf.domain, ...DOMAIN_OPTIONS]
 
   return (
-    <div className="pe-overlay" role="dialog" aria-modal="true" aria-label="Professional profile" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="pe-overlay" role="dialog" aria-modal="true" aria-label="Edit profile" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div className="pe-dialog">
         <div className="pe-head">
-          <h2>Professional profile</h2>
+          <h2>Edit profile</h2>
           <button className="pe-x" onClick={onClose} aria-label="Close">×</button>
         </div>
         {loading ? (
@@ -179,22 +233,44 @@ export default function ProfileEditor({ supabase, userId, username, onClose }: P
             {msg && <div className={`pe-msg ${msg.type}`} role="status">{msg.text}</div>}
 
             <section className="pe-sec">
-              <h3>Basics</h3>
+              <h3>You</h3>
               <div className="pe-avatar" style={{ marginBottom: 14 }}>
-                {form.avatar ? (
+                {effPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={form.avatar} alt="Your profile" />
-                ) : <span className="ph">{(form.displayName || username).slice(0, 2).toUpperCase()}</span>}
-                <label className="pe-btn ghost sm" style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
-                  Upload photo<input type="file" accept="image/jpeg,image/png,image/webp" onChange={onAvatar} style={{ display: 'none' }} />
-                </label>
+                  <img src={effPhoto} alt="Your profile" referrerPolicy="no-referrer" />
+                ) : <span className="ph">{(effName || cf.username).slice(0, 2).toUpperCase()}</span>}
+                <div>
+                  <p style={{ margin: 0, fontWeight: 800 }}>{effName || `@${cf.username}`}</p>
+                  <p className="pe-miss" style={{ margin: '2px 0 0' }}>{gName || gPhoto ? 'Name and photo come from your Google account.' : 'Add your name and photo (optional).'}</p>
+                </div>
               </div>
+              {!effName && (
+                <label className="pe-field" style={{ marginBottom: 12 }}>Your name (optional)<input className="pe-input" maxLength={60} value={form.displayName} onChange={(e) => set('displayName', e.target.value)} placeholder="Your full name" /></label>
+              )}
+              {!effPhoto && (
+                <label className="pe-btn ghost sm" style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', marginBottom: 12 }}>
+                  Upload a photo<input type="file" accept="image/jpeg,image/png,image/webp" onChange={onAvatar} style={{ display: 'none' }} />
+                </label>
+              )}
               <div className="pe-grid">
-                <label className="pe-field">Name<input className="pe-input" maxLength={60} value={form.displayName} onChange={(e) => set('displayName', e.target.value)} placeholder="Your full name" /></label>
+                <label className="pe-field">Username<input className="pe-input" maxLength={24} value={cf.username} onChange={(e) => setCf({ ...cf, username: e.target.value })} /></label>
                 <label className="pe-field">Location<input className="pe-input" maxLength={80} value={form.location} onChange={(e) => set('location', e.target.value)} placeholder="City, Country" /></label>
               </div>
               <label className="pe-field" style={{ marginTop: 12 }}>Headline<input className="pe-input" maxLength={120} value={form.headline} onChange={(e) => set('headline', e.target.value)} placeholder="e.g. Software Engineer preparing for product roles" /></label>
               <label className="pe-field" style={{ marginTop: 12 }}>About<textarea className="pe-area" maxLength={800} value={form.bio} onChange={(e) => set('bio', e.target.value)} placeholder="A few lines about you and what you are working towards." /></label>
+            </section>
+
+            <section className="pe-sec">
+              <h3>Career</h3>
+              <div className="pe-grid">
+                <label className="pe-field">Target role<input className="pe-input" maxLength={80} value={cf.target_role} onChange={(e) => setCf({ ...cf, target_role: e.target.value })} placeholder="e.g. Business Analyst" /></label>
+                <label className="pe-field">Domain
+                  <select className="pe-select" value={cf.domain} onChange={(e) => setCf({ ...cf, domain: e.target.value })}>{domOptions.map((d) => <option key={d} value={d}>{d}</option>)}</select>
+                </label>
+              </div>
+              <label className="pe-field" style={{ marginTop: 12 }}>Experience
+                <select className="pe-select" value={cf.experience} onChange={(e) => setCf({ ...cf, experience: e.target.value })}>{expOptions.map((d) => <option key={d} value={d}>{d}</option>)}</select>
+              </label>
             </section>
 
             <section className="pe-sec">
@@ -210,10 +286,10 @@ export default function ProfileEditor({ supabase, userId, username, onClose }: P
               <h3>Visibility</h3>
               <label className="pe-toggle">
                 <input type="checkbox" checked={form.isPublic} onChange={(e) => set('isPublic', e.target.checked)} />
-                <span><b>Make my profile public.</b> Anyone with the link can view it at <b>/u/{username}</b>, and search engines may index it. Your email is never shown. You can turn this off at any time.</span>
+                <span><b>Make my profile public.</b> Anyone can view it at <b>/u/{cf.username}</b> and it appears in the talent directory. Your email is never shown. You can turn this off at any time.</span>
               </label>
               <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
-                <button className="pe-btn" onClick={saveBasics} disabled={saving}>{saving ? 'Saving…' : 'Save profile'}</button>
+                <button className="pe-btn" onClick={saveAll} disabled={saving}>{saving ? 'Saving…' : 'Save profile'}</button>
                 {form.isPublic && <a className="pe-btn ghost" style={{ display: 'inline-flex', alignItems: 'center' }} href={`/u/${username}`} target="_blank" rel="noreferrer">View public page</a>}
               </div>
             </section>

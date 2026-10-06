@@ -14,6 +14,8 @@ import ProfileModal from '@/components/ProfileModal'
 import InviteModal from '@/components/InviteModal'
 import GuestHomepage from '@/components/marketing/GuestHomepage'
 import ProfileEditor from '@/components/ProfileEditor'
+import PeerPreview from '@/components/PeerPreview'
+import ProfileOverview from '@/components/ProfileOverview'
 
 const ChatRoom = lazyLoad(() => import('@/components/ChatRoom'), { ssr: false })
 
@@ -61,6 +63,8 @@ export default function HomePage() {
   const [showAuth, setShowAuth] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [showProEditor, setShowProEditor] = useState(false)
+  const [previewPeer, setPreviewPeer] = useState<UserProfile | null>(null)
+  const [profileRev, setProfileRev] = useState(0)
   const [inviteTarget, setInviteTarget] = useState<UserProfile | null>(null)
   const [publicPeers, setPublicPeers] = useState<Record<string, { display_name: string | null; avatar_url: string | null }>>({})
   useEffect(() => {
@@ -69,7 +73,7 @@ export default function HomePage() {
     return () => { on = false }
   }, [])
   const openPeer = (u: UserProfile) => {
-    if (publicPeers[u.id]) { window.open('/u/' + encodeURIComponent(u.username), '_blank', 'noopener'); return }
+    if (publicPeers[u.id]) { setPreviewPeer(u); return }
     if (!authUser || !profile) { setShowAuth(true); return }
     setInviteTarget(u)
   }
@@ -464,6 +468,11 @@ export default function HomePage() {
           onClose={() => setInviteTarget(null)} sending={sendingInvite} />
       )}
 
+      {previewPeer && (
+        <PeerPreview peer={previewPeer} status={sentInviteMap[previewPeer.id]} onClose={() => setPreviewPeer(null)}
+          onConnect={() => { const p = previewPeer; setPreviewPeer(null); if (!authUser || !profile) { setShowAuth(true); return } setInviteTarget(p) }} />
+      )}
+
       {/* ─── HEADER / NAV ─── */}
       {!authUser ? null : (
         <header className="header">
@@ -827,19 +836,11 @@ export default function HomePage() {
         {authUser && profile && activeTab === 'profile' && (
           <section className="section">
             <div className="profile-page">
-              <div className="profile-page-card">
-                <div className="profile-page-avatar">{(profile.username || 'U').slice(0, 2).toUpperCase()}</div>
-                <h2 className="profile-page-name">{profile.username}</h2>
-                <p className="profile-page-email">{authUser.email || profile.email || '—'}</p>
-              </div>
-              <div className="profile-page-card">
-                <div className="profile-fields">
-                  <div className="profile-field-row"><span className="pf-label">Target Role</span><span className="pf-value">{profile.target_role || '—'}</span></div>
-                  <div className="profile-field-row"><span className="pf-label">Experience</span><span className="pf-value">{profile.experience}</span></div>
-                  <div className="profile-field-row"><span className="pf-label">Domain</span><span className="pf-value">{profile.domain}</span></div>
-                  <div className="profile-field-row"><span className="pf-label">Member since</span><span className="pf-value">{new Date(profile.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span></div>
-                </div>
-              </div>
+              {getClient() && (
+                <ProfileOverview supabase={getClient()!} userId={authUser.id} username={profile.username}
+                  career={{ experience: profile.experience, domain: profile.domain, target_role: profile.target_role, created_at: profile.created_at }}
+                  authMeta={authUser.user_metadata as Record<string, unknown>} email={authUser.email ?? null} refreshKey={profileRev} />
+              )}
               <div className="profile-page-card">
                 <div className="profile-actions-stack">
                   <button className="btn btn-ghost w-full feedback-btn" onClick={() => { setShowFeedback(f => !f); setFeedbackSent(false) }}>💬 Share Feedback</button>
@@ -859,10 +860,14 @@ export default function HomePage() {
                       )}
                     </div>
                   )}
-                  <button className="btn btn-secondary w-full" onClick={() => setShowProfile(true)}>✏️ Edit Profile</button>
-                  <button className="btn btn-ghost w-full" onClick={() => setShowProEditor(true)}>💼 Professional Profile</button>
+                  <button className="btn btn-primary w-full" onClick={() => setShowProEditor(true)}>✏️ Edit profile</button>
                   {showProEditor && getClient() && (
-                    <ProfileEditor supabase={getClient()!} userId={authUser.id} username={profile.username} onClose={() => setShowProEditor(false)} />
+                    <ProfileEditor supabase={getClient()!} userId={authUser.id} username={profile.username}
+                      career={{ experience: profile.experience, domain: profile.domain, target_role: profile.target_role }}
+                      authMeta={authUser.user_metadata as Record<string, unknown>}
+                      onProfileUpdate={p => { setProfile(prev => prev ? { ...prev, ...p } : prev); showToast('Profile updated!') }}
+                      onSaved={() => setProfileRev(v => v + 1)}
+                      onClose={() => setShowProEditor(false)} />
                   )}
                   <button className="btn btn-danger w-full" onClick={handleLogout}>Sign Out</button>
                 </div>

@@ -1,0 +1,30 @@
+.pv-card{background:#fff;border:1px solid #E5EAF2;border-radius:16px;padding:22px;color:#0B1220;font-family:var(--font-inter),system-ui,sans-serif}
+.pv-head{display:flex;gap:16px;align-items:center}
+.pv-av{flex:none;width:76px;height:76px;border-radius:50%;object-fit:cover;background:linear-gradient(135deg,#2563EB,#7C3AED);color:#fff;display:grid;place-items:center;font-weight:800;font-size:24px}
+.pv-name{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.pv-sub{margin:2px 0 0;font-size:13px;color:#64748B;overflow-wrap:anywhere}
+.pv-headline{margin:6px 0 0;font-weight:600;font-size:15px}
+.pv-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pv-tag{font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;background:#F1F5F9;color:#334155}
+.pv-tag.role{background:#EFF6FF;color:#1D4ED8}
+.pv-sec{margin-top:20px;padding-top:16px;border-top:1px solid #EEF2F7}
+.pv-sec h3{margin:0 0 10px;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#94A3B8}
+.pv-sec p{margin:0;font-size:14px;line-height:1.65;color:#334155;white-space:pre-wrap}
+.pv-chips{display:flex;flex-wrap:wrap;gap:8px}
+.pv-chip{font-size:13px;font-weight:600;padding:6px 12px;border-radius:99px;border:1px dashed #94A3B8;color:#334155}
+.pv-chip small{opacity:.65;margin-left:6px}
+.pv-item{padding:9px 0;border-bottom:1px solid #F1F5F9;font-size:14px}
+.pv-item:last-child{border:0}
+.pv-item span{display:block;font-size:13px;color:#64748B}
+.pv-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px}
+.pv-links a{font-size:14px;font-weight:700;color:#2563EB}
+.pv-note{margin-top:8px;font-size:12px;color:#94A3B8}
+.pv-bar{height:8px;border-radius:99px;background:#E5EAF2;overflow:hidden}
+.pv-bar i{display:block;height:100%;background:linear-gradient(90deg,#2563EB,#7C3AED);transition:width .5s}
+.pv-status{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:16px;padding:12px 14px;border-radius:12px;background:#F8FAFC;font-size:13px;color:#334155}
+.pv-status.on{background:#ECFDF5;color:#047857}
+.pv-btn{min-height:42px;padding:0 16px;border-radius:10px;border:0;background:#2563EB;color:#fff;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.pv-btn.ghost{background:#F1F5F9;color:#0B1220}
+.pv-btn:disabled{opacity:.55;cursor:not-allowed}
+.pv-foot{position:sticky;bottom:0;background:#fff;border-top:1px solid #E5EAF2;padding:14px 20px;display:flex;gap:10px;flex-wrap:wrap}
+.pv-foot .pv-btn{flex:1;min-width:140px}
