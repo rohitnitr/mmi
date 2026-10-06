@@ -7,11 +7,10 @@ import type { User } from '@supabase/supabase-js'
 import { formatDistanceToNow } from 'date-fns'
 import lazyLoad from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Coffee, Sparkles, Star, ChevronRight, MessageCircle, Activity } from 'lucide-react'
+import { Users, Sparkles, Star, ChevronRight, MessageCircle, Activity } from 'lucide-react'
 import OnboardingModal from '@/components/OnboardingModal'
 import ProfileSetupModal from '@/components/ProfileSetupModal'
 import ProfileModal from '@/components/ProfileModal'
-import PaymentModal from '@/components/PaymentModal'
 import InviteModal from '@/components/InviteModal'
 import GuestHomepage from '@/components/marketing/GuestHomepage'
 import ProfileEditor from '@/components/ProfileEditor'
@@ -60,10 +59,20 @@ export default function HomePage() {
   const [userCoffeesShared, setUserCoffeesShared] = useState(0)
   const [activeTab, setActiveTab] = useState<Tab>('peers')
   const [showAuth, setShowAuth] = useState(false)
-  const [showPayment, setShowPayment] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [showProEditor, setShowProEditor] = useState(false)
   const [inviteTarget, setInviteTarget] = useState<UserProfile | null>(null)
+  const [publicPeers, setPublicPeers] = useState<Record<string, { display_name: string | null; avatar_url: string | null }>>({})
+  useEffect(() => {
+    let on = true
+    fetch('/api/peers/public').then(r => r.json()).then(j => { if (on) setPublicPeers(j.items || {}) }).catch(() => {})
+    return () => { on = false }
+  }, [])
+  const openPeer = (u: UserProfile) => {
+    if (publicPeers[u.id]) { window.open('/u/' + encodeURIComponent(u.username), '_blank', 'noopener'); return }
+    if (!authUser || !profile) { setShowAuth(true); return }
+    setInviteTarget(u)
+  }
   const [sendingInvite, setSendingInvite] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [loadingUsers, setLoadingUsers] = useState(true)
@@ -343,7 +352,7 @@ export default function HomePage() {
       })
       const data = await res.json()
       if (res.ok) {
-        showToast('Coffee offered! ☕')
+        showToast('Connection request sent!')
         if (inviteTarget) setSentInviteMap(prev => ({ ...prev, [inviteTarget.id]: 'pending' }))
         setInviteTarget(null)
       } else showToast(data.error || 'Failed to send invite', 'error')
@@ -440,7 +449,7 @@ export default function HomePage() {
             if (p) { await fetchInvites(authUser.id); await fetchSession(authUser.id) }
           }
           await fetchUsers()
-          showToast('Welcome! You are all set ☕ Unlimited invites!')
+          showToast('Welcome! You are all set. Start connecting with peers.')
         }} />
       )}
 
@@ -448,11 +457,6 @@ export default function HomePage() {
         <ProfileModal profile={profile} onClose={() => setShowProfile(false)}
           onUpdate={p => { setProfile(p); showToast('Profile updated!') }}
           onLogout={handleLogout} />
-      )}
-
-      {showPayment && authUser && (
-        <PaymentModal userId={authUser.id} onClose={() => setShowPayment(false)}
-          onSuccess={n => { showToast(`+${n} coffees! ☕`); fetchProfile(authUser.id) }} />
       )}
 
       {inviteTarget && authUser && profile && (
@@ -523,12 +527,12 @@ export default function HomePage() {
               {authUser ? (
                 <div>
                   <span className="metric-value">{userCoffeesShared}</span>
-                  <span className="metric-label">Coffees You Shared</span>
+                  <span className="metric-label">Connections made</span>
                 </div>
               ) : (
                 <div>
                   <span className="metric-value">{coffeesShared}</span>
-                  <span className="metric-label">Total Coffees Shared</span>
+                  <span className="metric-label">Total connections</span>
                 </div>
               )}
             </div>
@@ -621,7 +625,7 @@ export default function HomePage() {
 
                   {displayUsers.length === 0 ? (
                     <div className="empty-state">
-                      <p className="empty-icon">☕</p>
+                      <p className="empty-icon">🔍</p>
                       <p className="empty-title">{authUser ? 'No peers match your filters' : 'No peers match your filters'}</p>
                       <p className="empty-subtitle">{authUser ? 'Try clearing the filters above.' : 'Try clearing the filters above or join to find more peers.'}</p>
                       {!authUser && <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setShowAuth(true)}>Join Now →</button>}
@@ -639,12 +643,12 @@ export default function HomePage() {
                               transition={{ duration: 0.4, delay: idx * 0.05 }}
                               className="user-card"
                             >
-                              <div className="user-card-top">
-                                <div className="avatar md">{(user.username || 'U').slice(0, 2).toUpperCase()}</div>
+                              <div className="user-card-top" style={{ cursor: 'pointer' }} onClick={() => openPeer(user)}>
+                                {publicPeers[user.id]?.avatar_url ? <img className="avatar md" src={publicPeers[user.id]!.avatar_url as string} alt="" style={{ objectFit: 'cover' }} /> : <div className="avatar md">{(user.username || 'U').slice(0, 2).toUpperCase()}</div>}
                               <div className="online-dot" />
                             </div>
-                            <div className="user-card-body">
-                              <h3 className="user-name">{user.username}</h3>
+                            <div className="user-card-body" style={{ cursor: 'pointer' }} onClick={() => openPeer(user)}>
+                              <h3 className="user-name">{publicPeers[user.id]?.display_name || user.username}</h3>
                               <div className="user-tags">
                                 <span className="tag">{user.experience}</span>
                                 {user.domain && <span className="tag">{user.domain}</span>}
@@ -673,10 +677,10 @@ export default function HomePage() {
                                     if (!authUser || !profile) { setShowAuth(true); return }
                                     if (canSend) setInviteTarget(user)
                                   }}>
-                                  {isAccepted ? '✓ Accepted' :
+                                  {isAccepted ? '✓ Connected' :
                                    isDeclined ? '✗ Declined' :
-                                   isPending ? '✓ Coffee Sent' :
-                                   '☕ Offer Coffee'}
+                                   isPending ? '⏳ Pending' :
+                                   '＋ Connect'}
                                 </button>
                               )
                             })()}

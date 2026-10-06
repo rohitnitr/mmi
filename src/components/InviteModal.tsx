@@ -30,7 +30,7 @@ export default function InviteModal({ receiver, onSend, onClose, sending }: Invi
         <div className="invite-modal-header">
           <div className="avatar md">{receiver.username.slice(0, 2).toUpperCase()}</div>
           <div>
-            <p className="invite-modal-name">{receiver.username}</p>
+            <p className="invite-modal-name">Connect with {receiver.username}</p>
             <div className="invite-modal-tags">
               <span className="tag">{receiver.experience}</span>
               {receiver.domain && <span className="tag">{receiver.domain}</span>}
@@ -45,7 +45,7 @@ export default function InviteModal({ receiver, onSend, onClose, sending }: Invi
           </label>
           <textarea
             className="invite-note-area"
-            placeholder="Hi! I'm preparing for frontend roles. Want to do a quick mock together?"
+            placeholder="Hi! I'm preparing for frontend roles. Want to do a quick mock interview together?"
             value={note}
             onChange={e => setNote(e.target.value.slice(0, MAX))}
             rows={4}
@@ -58,9 +58,9 @@ export default function InviteModal({ receiver, onSend, onClose, sending }: Invi
           onClick={() => onSend(note)}
           disabled={sending}
         >
-          {sending ? <span className="spinner" /> : <><span>☕</span> Offer a Coffee</>}
+          {sending ? <span className="spinner" /> : 'Send request'}
         </button>
-        <p className="invite-modal-hint">Free · They have 7 days to accept · Unlimited invites</p>
+        <p className="invite-modal-hint">Free · They have 7 days to accept</p>
       </div>
     </div>
   )
