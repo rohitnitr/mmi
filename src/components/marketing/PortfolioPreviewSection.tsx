@@ -31,7 +31,7 @@ export default function PortfolioPreviewSection() {
             <div className="mh-pf-card">
               <p className="mh-bold">What your portfolio brings together</p>
               <div className="mh-parts">{parts.map((p) => <span key={p}>{p}</span>)}</div>
-              <p className="mh-small" style={{ marginTop: 16 }}>All values shown here are sample data for illustration. Richer profiles and portfolios are coming soon.</p>
+              <p className="mh-small" style={{ marginTop: 16 }}>All values shown here are sample data for illustration.</p>
             </div>
           </Reveal>
         </div>

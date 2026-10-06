@@ -57,6 +57,9 @@ export default function HomeTalent() {
       <p style={{ marginTop: 16, fontSize: 14 }}>
         <Link href="/talent">Browse all talent →</Link> · <Link href="/leaderboard">Leaderboard</Link>
       </p>
+      <p style={{ ...muted, fontSize: 13, marginTop: 6 }}>
+        Company accounts and recruiter tools are coming later. Profiles are listed only when members opt in.
+      </p>
     </section>
   )
 }

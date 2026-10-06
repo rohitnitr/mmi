@@ -27,6 +27,8 @@ export function PreviewBadge({ label = 'Example preview' }: { label?: string }) 
 
 const STATUS = { live: ['Live', 'mh-b-live'], partial: ['Basic version live', 'mh-b-live'], soon: ['Coming soon', 'mh-b-soon'], planned: ['Planned', 'mh-b-planned'] } as const
 export function StatusBadge({ status }: { status: keyof typeof STATUS }) {
+  // Everything on the homepage is live now, so only the 'planned' badge is shown.
+  if (status !== 'planned') return null
   return <span className={`mh-badge ${STATUS[status][1]}`}>{STATUS[status][0]}</span>
 }
 

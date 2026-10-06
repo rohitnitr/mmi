@@ -1,33 +1,45 @@
 'use client'
 
-import { Check, Clock } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { Reveal, SectionHeader } from './shared'
 
-const live = ['Peer matching by domain and role', 'Interview sessions with chat', 'Invites and session flow', 'Blog with interview guides']
-const next = ['Richer professional profiles', 'Structured peer feedback', 'Peer-validated skill evidence', 'MMI score and reputation', 'Shareable portfolio']
+const practice = [
+  'Peer matching by domain, experience and role',
+  'Chat sessions with real peers',
+  'Structured peer evaluations with written feedback',
+  'Skill evidence on your professional profile',
+]
+const share = [
+  'A public portfolio you can share, opt-in',
+  'MMI score, XP, streaks and a leaderboard',
+  'A talent directory of peer-rated members',
+  'A blog with interview guides',
+]
+
+function Card({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="mh-road-card" style={{ height: '100%' }}>
+      <h3 className="mh-h3">{title}</h3>
+      <ul style={{ marginTop: 10 }}>
+        {items.map((x) => (
+          <li key={x}>
+            <span className="mh-tick-ico" style={{ background: '#D1FAE5', color: '#047857' }}><Check size={15} aria-hidden="true" /></span>
+            {x}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 export default function SocialProofSection() {
   return (
     <section className="mh-sec" style={{ background: 'var(--soft)' }}>
       <div className="mh-wrap">
-        <SectionHeader eyebrow="Built in public" title="What works today, and what is next" description="We would rather show you our progress than invent numbers." />
+        <SectionHeader eyebrow="Available today" title="Everything here is live" description="We would rather show you real features than invent numbers." />
         <div className="mh-road">
-          <Reveal>
-            <div className="mh-road-card" style={{ height: '100%' }}>
-              <h3 className="mh-h3">Live now</h3>
-              <ul style={{ marginTop: 10 }}>
-                {live.map((x) => <li key={x}><span className="mh-tick-ico" style={{ background: '#D1FAE5', color: '#047857' }}><Check size={15} aria-hidden="true" /></span>{x}</li>)}
-              </ul>
-            </div>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <div className="mh-road-card" style={{ height: '100%' }}>
-              <h3 className="mh-h3">Coming next</h3>
-              <ul style={{ marginTop: 10 }}>
-                {next.map((x) => <li key={x} style={{ color: '#475569' }}><span className="mh-tick-ico"><Clock size={14} aria-hidden="true" /></span>{x}</li>)}
-              </ul>
-            </div>
-          </Reveal>
+          <Reveal><Card title="Practice and build evidence" items={practice} /></Reveal>
+          <Reveal delay={0.1}><Card title="Share and grow" items={share} /></Reveal>
         </div>
       </div>
     </section>

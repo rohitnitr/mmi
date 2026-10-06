@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   if (!token) return NextResponse.json({ error: 'Please log in.' }, { status: 401 })
   const { data: auth, error: authErr } = await admin.auth.getUser(token)
   const email = String(auth?.user?.email || '').toLowerCase()
-  const admins = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+  const admins = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
   if (authErr || !email || !admins.includes(email)) return NextResponse.json({ error: 'Not allowed.' }, { status: 403 })
 
   const since = new Date(Date.now() - 7 * 86400000).toISOString()

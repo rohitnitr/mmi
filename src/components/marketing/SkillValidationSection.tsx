@@ -40,7 +40,7 @@ export default function SkillValidationSection() {
             <span>SQL · 12 evaluations · 8 independent peers</span>
           </div>
           {!reduce && <button className="mh-btn mh-btn-glass mh-btn-sm" style={{ marginTop: 18 }} onClick={() => setS(0)}><RotateCcw size={15} aria-hidden="true" /> Replay</button>}
-          <p className="mh-demo-note">Peer-evaluated evidence based on completed MMI interviews. It is not a formal professional certification. This feature is coming soon.</p>
+          <p className="mh-demo-note">Peer-evaluated evidence based on completed MMI interviews. It is not a formal professional certification.</p>
         </div>
       </div>
     </section>

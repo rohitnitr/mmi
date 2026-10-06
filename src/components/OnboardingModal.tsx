@@ -57,7 +57,7 @@ export default function OnboardingModal({ onClose }: Props) {
           {error && <p className="form-error">{error}</p>}
           <div style={{ marginTop: 24, padding: '12px 16px', background: 'var(--gray-50)', borderRadius: 12, border: '1px solid var(--gray-200)' }}>
             <p className="ob-note" style={{ margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--gray-700)' }}>
-              <span style={{ color: 'var(--primary)' }}>✨</span> Completely free forever. No card needed.
+              <span style={{ color: 'var(--primary)' }}>✨</span> Free to join. No card needed.
             </p>
           </div>
         </div>

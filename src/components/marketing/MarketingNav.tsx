@@ -10,6 +10,7 @@ import type { CtaProps } from './shared'
 const links = [
   { href: '#how-it-works', label: 'How it works' },
   { href: '#skills', label: 'Evidence' },
+  { href: '/talent', label: 'Talent' },
   { href: '/blog', label: 'Blog' },
 ]
 

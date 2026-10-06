@@ -139,10 +139,12 @@ export default function HeroSection({ onAuth }: CtaProps) {
         </Reveal>
       </div>
 
-      <div className="mh-marquee" aria-hidden="true">
+      <div className="mh-wrap" style={{ position: 'relative', zIndex: 1, marginTop: 24, paddingBottom: 32 }}>
+        <div className="mh-marquee" aria-hidden="true" style={{ borderRadius: 16, border: '1px solid var(--line)' }}>
         <div className="mh-track">
           {ticker.map((x, k) => <span className="mh-tick" key={k}>{x.name}</span>)}
         </div>
+      </div>
       </div>
     </section>
   )

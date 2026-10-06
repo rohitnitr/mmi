@@ -10,7 +10,6 @@ import TwoSidedValueSection from './TwoSidedValueSection'
 import SkillValidationSection from './SkillValidationSection'
 import PortfolioPreviewSection from './PortfolioPreviewSection'
 import SocialProofSection from './SocialProofSection'
-import TalentPreviewSection from './TalentPreviewSection'
 import FinalCTASection from './FinalCTASection'
 import MarketingFooter from './MarketingFooter'
 import type { CtaProps } from './shared'
@@ -36,10 +35,9 @@ export default function GuestHomepage({ onAuth }: Props) {
         <SkillValidationSection />
         <PortfolioPreviewSection />
         <SocialProofSection />
-        <TalentPreviewSection />
+        <HomeTalent />
         <FinalCTASection onAuth={onAuth} />
-      <HomeTalent />
-</main>
+      </main>
       <MarketingFooter />
     </div>
   )
