@@ -14,8 +14,10 @@ const FOUNDER = {
   school: 'NIT Rourkela graduate',
   bio: 'Rohit builds MatchMyInterview and is building these mocks so that every JEE aspirant can afford regular, exam-like practice, not just the students who can pay for a coaching test series.',
   photo: '/founder.jpg', // put your photo at public/founder.jpg
-  // Add real links/numbers only: { label: 'Instagram', href: 'https://...', stat: '12K' }
-  links: [] as { label: string; href: string; stat?: string }[],
+  links: [
+    { label: 'GitHub', href: 'https://github.com/rohitnitr' },
+    { label: 'LinkedIn', href: 'https://www.linkedin.com/in/rohitnitr/' },
+  ] as { label: string; href: string; stat?: string }[],
 }
 
 // Real endorsements only. The "Voices" section stays hidden while this list is empty.
@@ -45,7 +47,7 @@ const FOUR = [
   ['Chapter test', 'A short timed set on one chapter, to check a topic before moving on.'],
 ] as const
 const STEPS = [
-  ['Continue with Google', 'One tap. We use the name and photo from your Google account, so there is no form and no password.'],
+  ['Get started with Google', 'One tap. We use the name and photo from your Google account, so there is no form and no password.'],
   ['Pick a mock', 'Choose a mock, read the marking scheme and pay \u20b911 to take it.'],
   ['Take it like the real exam', 'Full-screen, timed, JEE-style. Answers autosave and the server keeps the clock.'],
   ['Get your report', 'Marks, rank and percentile straight away. Add the full analysis for \u20b949.'],
@@ -75,7 +77,7 @@ const RESOURCES = [
 const LB = [[1, 'Student A', 248, 99.4], [2, 'Student B', 241, 98.7], [3, 'Student C', 236, 97.9], [4, 'You', 221, 94.2], [5, 'Student D', 214, 92.5]] as const
 const FAQ: [string, string][] = [
   ['Is this the official NTA exam?', 'No. This is an independent practice platform with a JEE-style interface. It is not affiliated with or endorsed by the NTA.'],
-  ['How do I sign up?', 'Tap Continue with Google and choose your account. That is all. There is no password and no form to fill.'],
+  ['How do I sign up?', 'Tap Get started and choose your Google account. That is all. There is no password and no form to fill.'],
   ['What do you take from my Google account?', 'Your name, email address and profile photo. We use them to set up your profile. Your name appears on the leaderboard only if you choose to show it.'],
   ['What do I get for \u20b911 and \u20b949?', `\u20b9${PRICE.mock} gets you a full mock with your marks, rank and percentile. \u20b9${PRICE.analysis} adds the complete analysis: mistakes by chapter and topic, time per question, the slow-but-wrong list and a practice plan.`],
   ['Is there a subscription?', 'No. You pay per mock. Nothing renews and nothing is charged in the background.'],
@@ -90,17 +92,6 @@ const FAQ: [string, string][] = [
   ['Which devices can I use?', 'A laptop or desktop is best for the full exam feel. Tablets work too.'],
   ['I am under 18. Can I join?', 'Please ask a parent or guardian before signing up.'],
 ]
-
-function GIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z" />
-      <path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z" />
-      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
-    </svg>
-  )
-}
 
 export default function JeeLanding() {
   const root = useRef<HTMLDivElement>(null)
@@ -148,9 +139,9 @@ export default function JeeLanding() {
     const { error } = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/jee/auth/callback` } })
     if (error) { setBusy(false); setErr('Could not start Google sign-in. Please try again.') }
   }
-  const label = busy ? 'Opening Google\u2026' : signedIn ? 'Open my dashboard' : 'Continue with Google'
+  const label = busy ? 'Opening Google\u2026' : signedIn ? 'Open my dashboard' : 'Get started'
   const gbtn = (cls = '', text = label) => (
-    <button type="button" className={`jx-g ${cls}`} onClick={start} disabled={busy}>{!signedIn && <GIcon />}<span>{text}</span></button>
+    <button type="button" className={`jx-cta ${cls}`} onClick={start} disabled={busy}>{text}</button>
   )
 
   return (
@@ -160,7 +151,7 @@ export default function JeeLanding() {
         <nav className="jx-links" aria-label="Sections">{NAV.map(([l, h]) => <a key={h} href={h}>{l}</a>)}</nav>
         <div className="jx-navr">
           <button type="button" className="jx-theme" onClick={flip} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>{theme === 'dark' ? '\u2600' : '\u263E'}</button>
-          {gbtn('sm', signedIn ? 'Dashboard' : 'Sign in')}
+          {gbtn('sm', busy ? 'Opening\u2026' : signedIn ? 'Dashboard' : 'Get started')}
         </div>
       </header>
 
@@ -209,7 +200,7 @@ export default function JeeLanding() {
             {p.hi && <em>Most popular</em>}
             <h3>{p.n}</h3><div className="jx-amt">{'\u20b9'}{p.p}<small> per mock</small></div>
             <ul>{p.pts.map((x) => <li key={x}>{x}</li>)}</ul>
-            {gbtn('wide', busy ? 'Opening Google\u2026' : signedIn ? 'Open my dashboard' : 'Get started with Google')}
+            {gbtn(p.hi ? 'wide' : 'wide alt')}
           </div>))}</div>
         <div className="jx-cmp jx-rv"><table>
           <thead><tr><th>What is included</th><th>{'\u20b9'}{PRICE.mock}</th><th>{'\u20b9'}{PRICE.analysis}</th></tr></thead>
@@ -234,7 +225,7 @@ export default function JeeLanding() {
         <p className="jx-sub jx-rv">Marks, rank and percentile for every mock, updated as students submit. Ranks are among students on this platform. Sample table below.</p>
         <div className="jx-lb jx-rv"><span className="jx-badge">Sample data for illustration</span>
           <table><thead><tr><th>Rank</th><th>Student</th><th>Marks</th><th>Percentile</th></tr></thead>
-            <tbody>{LB.map(([r, n, m, pc]) => <tr key={r} className={n === 'You' ? 'me' : ''}><td>#{r}</td><td>{n}</td><td>{m}</td><td>{pc}</td></tr>)}</tbody></table>
+            <tbody>{LB.map(([r, n, m, pc]) => <tr key={r} className={n === 'You' ? 'me' : ''}><td>#{r}</td><td>{n}</td><td>{m}/300</td><td>{pc}</td></tr>)}</tbody></table>
         </div>
       </div></section>
 
