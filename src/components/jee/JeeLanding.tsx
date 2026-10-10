@@ -5,172 +5,219 @@ import { getClient } from '@/lib/supabase/client'
 import ExamDemo from './ExamDemo'
 import './jee.css'
 
-// Prices in rupees. Change here only. (PASS is a placeholder price: set your own.)
-const PRICE = { mock: 11, analysis: 49 }
+// ---- Edit only this block -------------------------------------------------
+const PRICE = { mock: 11, analysis: 49 } // rupees
 
-const NAV = [['Features', '#features'], ['How it works', '#how'], ['Tests', '#tests'], ['Pricing', '#pricing'], ['FAQ', '#faq']]
-const TICKER = ['Physics', 'Chemistry', 'Mathematics', 'Full-length mocks', 'Part tests', 'Chapter tests', 'Question palette', 'Mistake analyzer', 'Time per question', 'Rank & percentile', 'Leaderboard', 'Revision notebook', 'Practice plan']
+const FOUNDER = {
+  name: 'Rohit Poddar',
+  role: 'Founder, MatchMyInterview',
+  school: 'NIT Rourkela graduate',
+  bio: 'Rohit builds MatchMyInterview and is building these mocks so that every JEE aspirant can afford regular, exam-like practice, not just the students who can pay for a coaching test series.',
+  photo: '/founder.jpg', // put your photo at public/founder.jpg
+  // Add real links/numbers only: { label: 'Instagram', href: 'https://...', stat: '12K' }
+  links: [] as { label: string; href: string; stat?: string }[],
+}
+
+// Real endorsements only. The "Voices" section stays hidden while this list is empty.
+const TESTIMONIALS: { name: string; role: string; quote: string }[] = []
+// ---------------------------------------------------------------------------
+
+const NAV = [['Home', '#home'], ['Features', '#features'], ['Pricing', '#pricing'], ['Try the demo', '#demo'], ['Resources', '#resources'], ['FAQ', '#faq']]
+const TICKER = ['Physics', 'Chemistry', 'Mathematics', 'Full-length mocks', 'Question palette', 'Time analysis', 'Rank & percentile', 'Leaderboard', 'Mistake analyzer', 'Chapter tests']
 const FEATURES = [
-  ['A real exam feel', 'Question palette with five states, section tabs, mark-for-review and a countdown, laid out like the JEE Main computer-based test.'],
-  ['Server-timed attempts', 'The clock runs on our server, so a refresh or a weak connection never adds or removes a minute.'],
-  ['Autosave and resume', 'Every answer is saved as you go. Reopen the link and you continue from the same question.'],
-  ['Full, part, sectional and chapter tests', 'Sit the three-hour paper, a Class 11 or 12 part test, one subject, or a single chapter when time is short.'],
-  ['Mistake analyzer', 'Each wrong answer is tied to its chapter and topic and sorted into slips, concept gaps and guesses, so revision goes where marks were lost.'],
-  ['Time on every question', 'See where you rushed, where you stalled, and which answers were slow and still wrong.'],
-  ['Rank and percentile, nationwide', 'Your marks ranked against every student on the platform who sat the same mock, from any city.'],
-  ['Country-wide leaderboard', 'Climb the board for each mock. Show your name or stay hidden, you choose.'],
-  ['Revision notebook', 'Bookmark a question during or after a test. Your notebook groups them by topic so revision is one tap away.'],
-  ['Progress tracker', 'Marks, accuracy and percentile across all your attempts, with your strongest and weakest chapters in one view.'],
-  ['Practice plan', 'A short plan built from your own attempt: what to revise and which questions to re-attempt.'],
-  ['Pick your timer', 'Run the full three hours, or set a shorter clock for sectionals and drills.'],
+  ['JEE-style exam screen', 'Question palette with five states, section navigation and a countdown timer, laid out the way you will meet it on exam day.'],
+  ['Server-timed attempts', 'The clock runs on our server, so a refresh or a bad connection never gives anyone extra time.'],
+  ['Autosave and resume', 'Every answer is saved as you go. Reload the page and pick up exactly where you were.'],
+  ['Mistake analyzer', 'Every wrong answer is mapped to its chapter and topic, so revision goes where marks were lost.'],
+  ['Chapter and topic reports', 'Subject, chapter and topic breakdowns after each attempt: accuracy, attempts and negatives.'],
+  ['Time per question', 'Spot the questions you rushed, the ones that ate your time and the slow-but-wrong ones.'],
+  ['Revision notebook', 'Bookmark questions while you practise and come back to them sorted by topic.'],
+  ['Progress tracker', 'Score, accuracy and chapter strength across every attempt, on one page in your profile.'],
+  ['Full, part, sectional, chapter', 'Full-syllabus mocks, Class 11 or 12 part tests, sectional tests and chapter tests.'],
+  ['A timer you can pick', 'Short bursts for a chapter, or the full three hours for a complete mock.'],
+  ['Marks, rank and percentile', 'Your marks, your rank and your percentile among students who took the same mock here.'],
+  ['Leaderboard, your choice', 'See where you stand on every mock. Show your name or stay hidden.'],
+] as const
+const FOUR = [
+  ['Full-length mock', 'Physics, Chemistry and Mathematics in one sitting, with the marking scheme shown first.'],
+  ['Class 11 or 12 part test', 'Test only the half of the syllabus you have finished.'],
+  ['Sectional test', 'One subject at a time, when you want to fix a single weak area.'],
+  ['Chapter test', 'A short timed set on one chapter, to check a topic before moving on.'],
 ] as const
 const STEPS = [
-  ['Get started with your email', 'Enter your email and tap the link we send. No password, no long forms. Your profile is ready in seconds.'],
-  ['Pick a mock', 'Choose a test, read the marking scheme and the chapters it covers, then unlock it for ₹11.'],
+  ['Continue with Google', 'One tap. We use the name and photo from your Google account, so there is no form and no password.'],
+  ['Pick a mock', 'Choose a mock, read the marking scheme and pay \u20b911 to take it.'],
   ['Take it like the real exam', 'Full-screen, timed, JEE-style. Answers autosave and the server keeps the clock.'],
-  ['Open your analysis', 'Add the full analysis for ₹49: every mistake by chapter and topic, time per question, slow-but-wrong list and a practice plan.'],
-  ['Compare, revise, repeat', 'Check your rank, percentile and the leaderboard, bookmark questions to revise, and watch your progress build mock after mock.'],
+  ['Get your report', 'Marks, rank and percentile straight away. Add the full analysis for \u20b949.'],
+  ['Track your growth', 'Your profile keeps every attempt, so you can watch your score and rank climb mock after mock.'],
 ]
-const TESTS = [
-  ['Full-length mocks', 'Physics, Chemistry and Mathematics in one three-hour sitting, with the marking scheme shown first.'],
-  ['Class 11 and 12 part tests', 'Cover one year of the syllabus at a time and find what you have let slip.'],
-  ['Sectional tests', 'One subject, one sitting. Build speed and accuracy where you are weakest.'],
-  ['Chapter tests', 'Short drills on a single chapter, ideal for the week after you finish a topic.'],
-] as const
-const CMP = [
-  ['Full-length JEE-style mock', 1, 1], ['Server-timed, autosaved attempt', 1, 1], ['Marks, rank and percentile', 1, 1],
-  ['Country-wide leaderboard', 1, 1], ['Revision notebook and progress tracker', 1, 1],
-  ['Every mistake mapped to chapter and topic', 0, 1], ['Time spent on each question', 0, 1],
-  ['Slow-but-wrong questions', 0, 1], ['Personal practice plan', 0, 1],
-] as const
 const PLANS = [
-  { n: 'Mock test', p: PRICE.mock, d: 'per mock', pts: ['Full-length JEE-style mock', 'Server-timed attempt with autosave', 'Marks, rank and percentile', 'Country-wide leaderboard'], hi: false },
-  { n: 'Mock + full analysis', p: PRICE.analysis, d: 'per mock', pts: ['Everything in Mock test', 'Every mistake by chapter and topic', 'Time spent on each question', 'Slow-but-wrong list and practice plan'], hi: true },
+  { n: 'Mock test', p: PRICE.mock, pts: ['Full-length JEE-style mock', 'Server-timed attempt with autosave', 'Marks, rank and percentile', 'Leaderboard access'], hi: false },
+  { n: 'Mock + full analysis', p: PRICE.analysis, pts: ['Everything in Mock test', 'Every mistake by chapter and topic', 'Time spent on each question', 'Slow-but-wrong list and practice plan'], hi: true },
 ]
-const LB = [[1, 'Student A', 'Aarav', 248, 99.4], [2, 'Student B', 'Diya', 241, 98.7], [3, 'Student C', 'Kabir', 236, 97.9], [4, 'You', 'Your row', 221, 94.2], [5, 'Student D', 'Meera', 214, 92.5]] as const
-const FAQ = [
+const CMP: [string, boolean, boolean][] = [
+  ['Full-length JEE-style mock', true, true],
+  ['Server-timed attempt with autosave', true, true],
+  ['Marks, rank and percentile', true, true],
+  ['Leaderboard', true, true],
+  ['Mistakes by chapter and topic', false, true],
+  ['Time spent on every question', false, true],
+  ['Slow-but-wrong list', false, true],
+  ['Personal practice plan', false, true],
+]
+const RESOURCES = [
+  ['Revision notes', 'Short chapter notes for Physics, Chemistry and Mathematics.'],
+  ['Formula sheets', 'One-page formula sheets, chapter by chapter.'],
+  ['Previous-year questions', 'Past JEE Main questions sorted by chapter.'],
+  ['Top questions', 'High-yield questions to revisit before a mock.'],
+  ['Chapter-wise mocks', 'Previous-year questions arranged as timed tests.'],
+] as const
+const LB = [[1, 'Student A', 248, 99.4], [2, 'Student B', 241, 98.7], [3, 'Student C', 236, 97.9], [4, 'You', 221, 94.2], [5, 'Student D', 214, 92.5]] as const
+const FAQ: [string, string][] = [
   ['Is this the official NTA exam?', 'No. This is an independent practice platform with a JEE-style interface. It is not affiliated with or endorsed by the NTA.'],
-  ['How do I sign up?', 'Tap Get started, enter your email and open the link we send you. That signs you in. There is no password to remember.'],
-  ['What do I get for ₹11 and ₹49?', `₹${PRICE.mock} unlocks one full mock with your marks, rank, percentile and leaderboard. ₹${PRICE.analysis} adds the complete analysis for that mock: every mistake by chapter and topic, time per question, slow-but-wrong list and a practice plan.`],
-  ['Is the screen the same as the real JEE Main?', 'It is modelled on the JEE Main computer-based format: question palette, section tabs, mark for review and a countdown. We do not claim it is identical.'],
-  ['Which subjects and topics are covered?', 'Physics, Chemistry and Mathematics across the JEE Main syllabus. Each test lists its chapters before you begin.'],
-  ['How is the paper marked?', 'Each mock follows the official marking scheme, shown on the test page before you begin.'],
-  ['What does the full analysis include?', 'Accuracy by subject, chapter and topic, your mistakes grouped by type, time spent on every question, the slow-but-wrong list and a short practice plan.'],
-  ['How does the revision notebook work?', 'Bookmark any question while you test or when you review. The notebook groups them by topic so you can revise them later.'],
-  ['Is this a subscription?', 'No. You pay per mock, ₹11 or ₹49. There is nothing to cancel.'],
-  ['How are rank and percentile worked out?', 'Among everyone on the platform who submitted the same mock. Percentile is the share of students you scored above. It is a practice ranking, and it becomes more meaningful as more students attempt each mock.'],
-  ['What happens if my internet drops?', 'Your answers are autosaved. Reconnect, reopen the mock and continue. The timer is kept by the server, so the deadline does not move.'],
-  ['Can I hide my name on the leaderboard?', 'Yes. You choose whether your name is shown.'],
-  ['Which devices can I use?', 'A laptop or desktop is best for a full paper. Tablets work too, and phones suit short sectional and chapter tests.'],
+  ['How do I sign up?', 'Tap Continue with Google and choose your account. That is all. There is no password and no form to fill.'],
+  ['What do you take from my Google account?', 'Your name, email address and profile photo. We use them to set up your profile. Your name appears on the leaderboard only if you choose to show it.'],
+  ['What do I get for \u20b911 and \u20b949?', `\u20b9${PRICE.mock} gets you a full mock with your marks, rank and percentile. \u20b9${PRICE.analysis} adds the complete analysis: mistakes by chapter and topic, time per question, the slow-but-wrong list and a practice plan.`],
+  ['Is there a subscription?', 'No. You pay per mock. Nothing renews and nothing is charged in the background.'],
+  ['How close is the screen to the real JEE Main?', 'It is modelled on it: the same palette states, the same section flow and a countdown timer. It is not an exact copy, and it is not run by the NTA.'],
+  ['How is the paper marked?', 'Each mock follows the marking scheme shown on its page before you begin.'],
+  ['How are rank and percentile worked out?', 'Among everyone on this platform who submitted the same mock. They become more meaningful as more students attempt each mock.'],
+  ['What does "nationwide" mean here?', 'Students from across the country who use this platform. It is not a comparison with every JEE candidate.'],
+  ['What happens if my internet drops?', 'Your answers are autosaved. Reconnect, reopen the mock and continue. The timer is kept by the server.'],
+  ['Can I hide my name on the leaderboard?', 'Yes. You decide whether your name is shown.'],
+  ['What are part, sectional and chapter tests?', 'Part tests cover Class 11 or Class 12 only. Sectional tests are one subject. Chapter tests are a short set on one chapter.'],
+  ['When do notes, formula sheets and PYQs arrive?', 'They are being added now and are marked Coming soon on this page until they are live.'],
+  ['Which devices can I use?', 'A laptop or desktop is best for the full exam feel. Tablets work too.'],
   ['I am under 18. Can I join?', 'Please ask a parent or guardian before signing up.'],
-  ['How do I contact support?', 'Write to us from the Contact page and we will reply by email.'],
 ]
 
-function Signup({ onClose }: { onClose: () => void }) {
-  const [email, setEmail] = useState(''); const [agree, setAgree] = useState(false)
-  const [busy, setBusy] = useState(false); const [sent, setSent] = useState(false); const [err, setErr] = useState('')
-  useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onClose])
-  async function go(e: React.FormEvent) {
-    e.preventDefault()
-    const c = getClient(); if (!c) { setErr('Sign-in is unavailable right now. Please try again.'); return }
-    setBusy(true); setErr('')
-    const { error } = await c.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: `${window.location.origin}/jee/auth/callback` } })
-    setBusy(false)
-    if (error) setErr(/rate|limit/i.test(error.message) ? 'Too many tries. Wait a minute and try again.' : 'Could not send the link. Check your email and try again.')
-    else setSent(true)
-  }
+function GIcon() {
   return (
-    <div className="jx-ov" onClick={onClose}>
-      <div className="jx-modal" role="dialog" aria-modal="true" aria-label="Get started" onClick={(e) => e.stopPropagation()}>
-        <button className="jx-x" onClick={onClose} aria-label="Close">×</button>
-        {sent ? <><h3>Check your email</h3><p className="jx-sub">We sent a sign-in link to <b>{email}</b>. Open it on this device to start.</p></> : (
-          <form onSubmit={go}>
-            <h3>Get started</h3><p className="jx-sub">Just your email. We will send a sign-in link.</p>
-            <input type="email" required autoFocus placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={254} />
-            <label className="jx-check dark"><input type="checkbox" required checked={agree} onChange={(e) => setAgree(e.target.checked)} />I agree to the <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>. If I am under 18, a parent or guardian knows I am signing up.</label>
-            <button className="jx-cta" disabled={busy}>{busy ? 'Sending…' : 'Email me the link'}</button>
-            {err && <p className="jx-err dark" role="alert">{err}</p>}
-          </form>)}
-      </div>
-    </div>
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z" />
+      <path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z" />
+      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
+    </svg>
   )
 }
 
 export default function JeeLanding() {
   const root = useRef<HTMLDivElement>(null)
-  const [open, setOpen] = useState(false)
   const [step, setStep] = useState(0)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [signedIn, setSignedIn] = useState(false)
+  const [photoOk, setPhotoOk] = useState(true)
+
+  useEffect(() => {
+    let t: string | null = null
+    try { t = localStorage.getItem('jx-theme') } catch { /* private mode */ }
+    if (t === 'dark' || t === 'light') setTheme(t)
+    else if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) setTheme('dark')
+  }, [])
+  const flip = () => {
+    const n = theme === 'dark' ? 'light' : 'dark'
+    setTheme(n)
+    try { localStorage.setItem('jx-theme', n) } catch { /* ignore */ }
+  }
+
   useEffect(() => {
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target) } }), { threshold: 0.12 })
     root.current?.querySelectorAll('.jx-rv').forEach((el) => io.observe(el))
     return () => io.disconnect()
   }, [])
   useEffect(() => { const t = setInterval(() => setStep((s) => (s + 1) % STEPS.length), 4500); return () => clearInterval(t) }, [])
-  const start = () => setOpen(true)
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('signin') === 'failed') setErr('Sign-in did not complete. Please try again.')
+    const c = getClient()
+    if (c) c.auth.getSession().then(({ data }) => setSignedIn(!!data.session)).catch(() => {})
+    const back = () => setBusy(false) // returning with the back button
+    window.addEventListener('pageshow', back)
+    return () => window.removeEventListener('pageshow', back)
+  }, [])
+  useEffect(() => { if (!err) return; const t = setTimeout(() => setErr(''), 6000); return () => clearTimeout(t) }, [err])
+
+  async function start() {
+    if (signedIn) { window.location.href = '/jee/welcome'; return }
+    const c = getClient()
+    if (!c) { setErr('Sign-in is unavailable right now. Please try again in a moment.'); return }
+    setBusy(true); setErr('')
+    const { error } = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/jee/auth/callback` } })
+    if (error) { setBusy(false); setErr('Could not start Google sign-in. Please try again.') }
+  }
+  const label = busy ? 'Opening Google\u2026' : signedIn ? 'Open my dashboard' : 'Continue with Google'
+  const gbtn = (cls = '', text = label) => (
+    <button type="button" className={`jx-g ${cls}`} onClick={start} disabled={busy}>{!signedIn && <GIcon />}<span>{text}</span></button>
+  )
+
   return (
-    <div className="jx" ref={root}>
+    <div className="jx" ref={root} data-theme={theme}>
       <header className="jx-nav">
-        <a href="/" className="jx-brand">MatchMyInterview <span>· JEE</span></a>
-        <nav className="jx-links">{NAV.map(([l, h]) => <a key={h} href={h}>{l}</a>)}</nav>
-        <button className="jx-navcta" onClick={start}>Get started</button>
+        <a href="#home" className="jx-brand">MatchMyInterview <span>· JEE</span></a>
+        <nav className="jx-links" aria-label="Sections">{NAV.map(([l, h]) => <a key={h} href={h}>{l}</a>)}</nav>
+        <div className="jx-navr">
+          <button type="button" className="jx-theme" onClick={flip} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>{theme === 'dark' ? '\u2600' : '\u263E'}</button>
+          {gbtn('sm', signedIn ? 'Dashboard' : 'Sign in')}
+        </div>
       </header>
 
-      <section className="jx-hero">
+      <section className="jx-hero" id="home">
         <i className="jx-blob b1" /><i className="jx-blob b2" />
         <div className="jx-wrap jx-herogrid">
           <div>
-            <span className="jx-pill">JEE Main mock tests · from ₹{PRICE.mock}</span>
+            <span className="jx-pill">JEE Main mock tests · from {'\u20b9'}{PRICE.mock}</span>
             <h1>The mock test that feels like the <em>real JEE.</em></h1>
             <p className="jx-lead">Take full-length JEE-style mocks, then see your marks, rank, percentile and a complete analysis of where you gained and lost marks.</p>
-            <div className="jx-hero-cta"><button className="jx-cta" onClick={start}>Get started with your email</button><a href="#how" className="jx-ghost">See how it works</a></div>
-            <div className="jx-chips"><span>Mock test ₹{PRICE.mock}</span><span>Full analysis ₹{PRICE.analysis}</span></div>
-            <p className="jx-small">Try the interface on the right. It is a sample, not a real paper.</p>
+            <div className="jx-hero-cta">{gbtn()}<a href="#how" className="jx-ghost">See how it works</a></div>
+            <div className="jx-chips"><span>Mock test {'\u20b9'}{PRICE.mock}</span><span>Full analysis {'\u20b9'}{PRICE.analysis}</span><span>No subscription</span></div>
+            <p className="jx-small">Try the exam screen on the right. It is a sample, not a real paper.</p>
           </div>
-          <ExamDemo />
+          <div id="demo"><ExamDemo /></div>
         </div>
       </section>
 
       <div className="jx-ticker" aria-hidden="true"><div>{[...TICKER, ...TICKER, ...TICKER].map((t, i) => <span key={i}>{t}</span>)}</div></div>
 
       <section className="jx-sec" id="features"><div className="jx-wrap">
-        <h2 className="jx-rv">Everything you need to practise properly</h2>
-        <p className="jx-sub jx-rv">One platform for the exam, the score and the plan to improve it.</p>
+        <h2 className="jx-rv">What a coaching test series gives you, priced per mock</h2>
+        <p className="jx-sub jx-rv">Exam-style practice, a detailed report and a plan to improve it. You pay for the mocks you take and nothing else.</p>
         <div className="jx-feats">{FEATURES.map(([t, d], i) => <div className="jx-feat jx-rv" style={{ transitionDelay: `${(i % 3) * 80}ms` }} key={t}><b>{t}</b><p>{d}</p></div>)}</div>
       </div></section>
 
-      <section className="jx-sec alt" id="how"><div className="jx-wrap">
+      <section className="jx-sec alt"><div className="jx-wrap">
+        <h2 className="jx-rv">Four ways to practise</h2>
+        <p className="jx-sub jx-rv">Use the format that fits where you are in your preparation.</p>
+        <div className="jx-four">{FOUR.map(([t, d], i) => <div className="jx-card jx-rv" style={{ transitionDelay: `${i * 80}ms` }} key={t}><b>{t}</b><p>{d}</p></div>)}</div>
+      </div></section>
+
+      <section className="jx-sec" id="how"><div className="jx-wrap">
         <h2 className="jx-rv">How it works</h2>
         <div className="jx-how jx-rv">
-          <ol>{STEPS.map(([t], i) => <li key={t}><button className={i === step ? 'on' : ''} onClick={() => setStep(i)}><b>{i + 1}</b>{t}</button></li>)}</ol>
+          <ol>{STEPS.map(([t], i) => <li key={t}><button type="button" className={i === step ? 'on' : ''} onClick={() => setStep(i)}><b>{i + 1}</b>{t}</button></li>)}</ol>
           <div className="jx-how-panel" key={step}><span>Step {step + 1} of {STEPS.length}</span><h3>{STEPS[step][0]}</h3><p>{STEPS[step][1]}</p><i className="jx-prog" /></div>
         </div>
       </div></section>
 
-      <section className="jx-sec" id="tests"><div className="jx-wrap">
-        <h2 className="jx-rv">Four ways to practise</h2>
-        <p className="jx-sub jx-rv">Match the test to the time you have.</p>
-        <div className="jx-tests">{TESTS.map(([t, d], i) => <div className="jx-test jx-rv" style={{ transitionDelay: `${(i % 4) * 80}ms` }} key={t}><b>{t}</b><p>{d}</p></div>)}</div>
-      </div></section>
-
-      <section className="jx-sec" id="pricing"><div className="jx-wrap">
+      <section className="jx-sec alt" id="pricing"><div className="jx-wrap">
         <h2 className="jx-rv">Simple pricing</h2>
-        <p className="jx-sub jx-rv">Pay only for what you use. No hidden charges.</p>
+        <p className="jx-sub jx-rv">Per mock. No subscription, no season pass, no hidden charges.</p>
         <div className="jx-plans">{PLANS.map((p, i) => (
           <div className={`jx-plan jx-rv${p.hi ? ' hi' : ''}`} style={{ transitionDelay: `${i * 90}ms` }} key={p.n}>
             {p.hi && <em>Most popular</em>}
-            <h3>{p.n}</h3><div className="jx-amt">₹{p.p}<small> {p.d}</small></div>
+            <h3>{p.n}</h3><div className="jx-amt">{'\u20b9'}{p.p}<small> per mock</small></div>
             <ul>{p.pts.map((x) => <li key={x}>{x}</li>)}</ul>
-            <button className={p.hi ? 'jx-cta' : 'jx-outline'} onClick={start}>Get started</button>
+            {gbtn('wide', busy ? 'Opening Google\u2026' : signedIn ? 'Open my dashboard' : 'Get started with Google')}
           </div>))}</div>
+        <div className="jx-cmp jx-rv"><table>
+          <thead><tr><th>What is included</th><th>{'\u20b9'}{PRICE.mock}</th><th>{'\u20b9'}{PRICE.analysis}</th></tr></thead>
+          <tbody>{CMP.map(([n, a, b]) => <tr key={n}><td>{n}</td><td className={a ? 'jx-yes' : 'jx-no'}>{a ? '\u2713' : '\u2014'}</td><td className={b ? 'jx-yes' : 'jx-no'}>{b ? '\u2713' : '\u2014'}</td></tr>)}</tbody>
+        </table></div>
       </div></section>
 
-      <section className="jx-sec"><div className="jx-wrap jx-narrow">
-        <h2 className="jx-rv">What each price includes</h2>
-        <div className="jx-scroll jx-rv"><table className="jx-cmp"><thead><tr><th>Feature</th><th>Mock ₹{PRICE.mock}</th><th>Mock + analysis ₹{PRICE.analysis}</th></tr></thead>
-          <tbody>{CMP.map(([f, a, b]) => <tr key={f}><td>{f}</td><td className={a ? 'y' : 'n'}>{a ? '✓' : '–'}</td><td className={b ? 'y' : 'n'}>{b ? '✓' : '–'}</td></tr>)}</tbody></table></div>
-      </div></section>
-
-      <section className="jx-sec alt" id="report"><div className="jx-wrap">
+      <section className="jx-sec" id="report"><div className="jx-wrap">
         <h2 className="jx-rv">A report that shows exactly what to fix</h2>
         <p className="jx-sub jx-rv">Sample report with made-up numbers, to show the layout.</p>
         <div className="jx-report jx-rv"><span className="jx-badge">Sample data for illustration</span>
@@ -182,18 +229,43 @@ export default function JeeLanding() {
           </div></div>
       </div></section>
 
-      <section className="jx-sec" id="leaderboard"><div className="jx-wrap">
+      <section className="jx-sec alt" id="leaderboard"><div className="jx-wrap">
         <h2 className="jx-rv">Know exactly where you rank</h2>
-        <p className="jx-sub jx-rv">Marks, rank and percentile for every mock, transparent and updated as students submit. Sample table below.</p>
+        <p className="jx-sub jx-rv">Marks, rank and percentile for every mock, updated as students submit. Ranks are among students on this platform. Sample table below.</p>
         <div className="jx-lb jx-rv"><span className="jx-badge">Sample data for illustration</span>
           <table><thead><tr><th>Rank</th><th>Student</th><th>Marks</th><th>Percentile</th></tr></thead>
-            <tbody>{LB.map(([r, n, , m, pc]) => <tr key={r} className={n === 'You' ? 'me' : ''}><td>#{r}</td><td>{n}</td><td>{m}</td><td>{pc}</td></tr>)}</tbody></table>
+            <tbody>{LB.map(([r, n, m, pc]) => <tr key={r} className={n === 'You' ? 'me' : ''}><td>#{r}</td><td>{n}</td><td>{m}</td><td>{pc}</td></tr>)}</tbody></table>
         </div>
       </div></section>
 
-      <section className="jx-sec alt"><div className="jx-wrap">
-        <h2 className="jx-rv">Your profile tracks your growth</h2>
-        <div className="jx-feats">{[['Every attempt, saved', 'Scores, ranks and reports for each mock in one place.'], ['Progress over time', 'See marks and percentile move up as you fix weak topics.'], ['Strong and weak topics', 'Your topic map updates after every mock, so practice stays focused.']].map(([t, d], i) => <div className="jx-feat jx-rv" style={{ transitionDelay: `${i * 80}ms` }} key={t}><b>{t}</b><p>{d}</p></div>)}</div>
+      <section className="jx-sec" id="resources"><div className="jx-wrap">
+        <h2 className="jx-rv">Study resources, on the way</h2>
+        <p className="jx-sub jx-rv">Notes, formula sheets and previous-year questions are being added next to the mocks. They are planned to be free for every signed-in student.</p>
+        <div className="jx-res">{RESOURCES.map(([t, d], i) => <div className="jx-card jx-rv" style={{ transitionDelay: `${(i % 3) * 80}ms` }} key={t}><b>{t}</b><p>{d}</p><span className="jx-tag">Coming soon</span></div>)}</div>
+      </div></section>
+
+      {TESTIMONIALS.length > 0 && (
+        <section className="jx-sec alt" id="voices"><div className="jx-wrap">
+          <h2 className="jx-rv">What students and mentors say</h2>
+          <div className="jx-voices">{TESTIMONIALS.map((v) => <figure className="jx-voice jx-rv" style={{ margin: 0 }} key={v.name}><p>{v.quote}</p><b>{v.name}</b><span>{v.role}</span></figure>)}</div>
+        </div></section>
+      )}
+
+      <section className="jx-sec alt" id="founder"><div className="jx-wrap jx-narrow">
+        <h2 className="jx-rv">The person behind it</h2>
+        <div className="jx-founder jx-rv">
+          {photoOk
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img className="jx-ph" src={FOUNDER.photo} alt={FOUNDER.name} width={168} height={168} onError={() => setPhotoOk(false)} />
+            : <div className="jx-ph" aria-hidden="true">{FOUNDER.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}</div>}
+          <div>
+            <h3>{FOUNDER.name}</h3>
+            <p className="jx-role">{FOUNDER.role}</p>
+            <p><b style={{ color: 'var(--ink)' }}>{FOUNDER.school}</b></p>
+            <p>{FOUNDER.bio}</p>
+            {FOUNDER.links.length > 0 && <div className="jx-soc">{FOUNDER.links.map((l) => <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer">{l.label}{l.stat ? ` · ${l.stat}` : ''}</a>)}</div>}
+          </div>
+        </div>
       </div></section>
 
       <section className="jx-sec" id="faq"><div className="jx-wrap jx-narrow">
@@ -202,17 +274,31 @@ export default function JeeLanding() {
       </div></section>
 
       <section className="jx-sec join"><div className="jx-wrap jx-narrow jx-rv">
-        <h2>Start your first mock today</h2>
-        <p className="jx-sub">Enter your email, tap the link, and you are in.</p>
-        <button className="jx-cta" onClick={start}>Get started</button>
+        <span className="jx-pill jx-join-pill">Built by an NIT Rourkela graduate</span>
+        <h2>Your IIT or NIT seat starts with the next mock</h2>
+        <p className="jx-sub">Real-exam practice, a full report after every attempt and a plan for what to fix next. One tap with Google and you are in.</p>
+        {gbtn()}
+        <p className="jx-small">Pay per mock · No subscription · No password</p>
+        <p className="jx-small">By continuing you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.</p>
       </div></section>
 
       <footer className="jx-foot"><div className="jx-wrap">
-        <p>Built by an NIT Rourkela graduate.</p>
-        <p className="jx-small">JEE and NTA are names of exams and an organisation unrelated to us. This is an independent practice platform, not affiliated with or endorsed by the NTA.</p>
-        <p className="jx-small"><a href="/">MatchMyInterview</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/contact">Contact</a></p>
+        <div className="jx-fgrid">
+          <div>
+            <p className="jx-fb">MatchMyInterview · JEE</p>
+            <p>JEE Main mock tests with a full report after every attempt: marks, rank, percentile, time analysis and a practice plan.</p>
+          </div>
+          <div><h4>Platform</h4><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#demo">Try the demo</a><a href="#resources">Resources</a></div>
+          <div><h4>Legal</h4><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="/contact">Contact</a></div>
+          <div><h4>More</h4><a href="/">MatchMyInterview</a><a href="#founder">About the founder</a><a href="#faq">FAQ</a></div>
+        </div>
+        <div className="jx-fbot">
+          <p>JEE and NTA are names of an exam and an organisation unrelated to us. This is an independent practice platform, not affiliated with or endorsed by the NTA.</p>
+          <p>{'\u00a9'} {new Date().getFullYear()} MatchMyInterview. Made for JEE aspirants.</p>
+        </div>
       </div></footer>
-      {open && <Signup onClose={() => setOpen(false)} />}
+
+      {err && <div className="jx-toast" role="alert">{err}</div>}
     </div>
   )
 }

@@ -29,7 +29,7 @@ export default function ExamDemo() {
       <div className="jx-exam-body">
         <div className="jx-q">
           <div className="jx-qmeta"><span>{q.s}</span><span>Question {cur + 1}</span><em>Sample question</em></div>
-          {lock ? <p className="jx-lock">That is the end of the preview. Get started to take the full mock.</p> : <>
+          {lock ? <p className="jx-lock">That is the end of the preview. Continue with Google to take the full mock.</p> : <>
             <p className="jx-qtext">{q.q}</p>
             {q.o.map((o, i) => (
               <button key={o} className={`jx-opt${ans[cur] === i ? ' on' : ''}`} onClick={() => setAns({ ...ans, [cur]: i })}><i>{String.fromCharCode(65 + i)}</i>{o}</button>
