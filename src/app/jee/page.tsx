@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
-import JeeLandingPage from '@/components/jee/JeeLandingPage'
+import JeeLanding from '@/components/jee/JeeLanding'
 
 export const metadata: Metadata = {
-  title: 'JEE Main mock tests from ₹11 | MatchMyInterview',
-  description: 'Full-length JEE-style mocks with a real exam screen, marks, country-wide rank and percentile, and a complete analysis of your mistakes and time per question.',
+  title: 'JEE Main mock tests with a full analysis | MatchMyInterview',
+  description: 'Full-length JEE-style mock tests with a detailed analysis after every attempt: subject breakdown, time per question and a practice plan. Marks, country-wide rank and percentile, from ₹11.',
+  openGraph: { title: 'JEE-style mock tests with a full analysis', description: 'Practice in a JEE-style interface. Know exactly what to fix.', type: 'website' },
 }
 
-export default function Page() {
-  return <JeeLandingPage />
+export default function JeePage() {
+  return <JeeLanding />
 }

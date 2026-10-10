@@ -15,7 +15,8 @@ create table if not exists public.jee_students (
 create table if not exists public.jee_tests (
   id uuid primary key default gen_random_uuid(),
   title text not null,
-  kind text not null default 'full' check (kind in ('full','sectional','chapter')),
+  kind text not null default 'full' check (kind in ('full','part','sectional','chapter')),
+  class_level smallint check (class_level in (11,12)),
   duration_minutes int not null default 180 check (duration_minutes between 5 and 240),
   status text not null default 'draft' check (status in ('draft','live','closed')),
   opens_at timestamptz,

@@ -6,45 +6,64 @@ import ExamDemo from './ExamDemo'
 import './jee.css'
 
 // Prices in rupees. Change here only. (PASS is a placeholder price: set your own.)
-const PRICE = { mock: 11, analysis: 29, pass: 99 }
+const PRICE = { mock: 11, analysis: 49 }
 
-const NAV = [['Features', '#features'], ['How it works', '#how'], ['Pricing', '#pricing'], ['FAQ', '#faq']]
-const TICKER = ['Physics', 'Chemistry', 'Mathematics', 'Full-length mocks', 'Question palette', 'Time analysis', 'Rank & percentile', 'Leaderboard', 'Practice plan']
+const NAV = [['Features', '#features'], ['How it works', '#how'], ['Tests', '#tests'], ['Pricing', '#pricing'], ['FAQ', '#faq']]
+const TICKER = ['Physics', 'Chemistry', 'Mathematics', 'Full-length mocks', 'Part tests', 'Chapter tests', 'Question palette', 'Mistake analyzer', 'Time per question', 'Rank & percentile', 'Leaderboard', 'Revision notebook', 'Practice plan']
 const FEATURES = [
-  ['A real exam feel', 'JEE-style layout, question palette with five states, section-wise navigation and a countdown timer.'],
-  ['Server-timed attempts', 'The clock runs on our server, so a refresh or a bad connection never gives anyone extra time.'],
-  ['Autosave and resume', 'Every answer is saved as you go. Reload the page and pick up exactly where you were.'],
-  ['Full-length mocks', 'Physics, Chemistry and Mathematics in one sitting, with the marking scheme shown before you start.'],
-  ['Marks, rank and percentile', 'Your marks, your rank and your percentile among everyone who attempted the same mock.'],
-  ['Live leaderboard', 'See where you stand for each mock. Show your name or stay hidden, it is your choice.'],
-  ['Detailed analysis', 'Subject and topic accuracy, attempts, negatives and where your marks were lost.'],
-  ['Time per question', 'Spot the questions you rushed, the ones that ate your time and the slow-but-wrong ones.'],
-  ['Practice plan', 'A short plan built from your own attempt: what to revise and what to re-attempt.'],
+  ['A real exam feel', 'Question palette with five states, section tabs, mark-for-review and a countdown, laid out like the JEE Main computer-based test.'],
+  ['Server-timed attempts', 'The clock runs on our server, so a refresh or a weak connection never adds or removes a minute.'],
+  ['Autosave and resume', 'Every answer is saved as you go. Reopen the link and you continue from the same question.'],
+  ['Full, part, sectional and chapter tests', 'Sit the three-hour paper, a Class 11 or 12 part test, one subject, or a single chapter when time is short.'],
+  ['Mistake analyzer', 'Each wrong answer is tied to its chapter and topic and sorted into slips, concept gaps and guesses, so revision goes where marks were lost.'],
+  ['Time on every question', 'See where you rushed, where you stalled, and which answers were slow and still wrong.'],
+  ['Rank and percentile, nationwide', 'Your marks ranked against every student on the platform who sat the same mock, from any city.'],
+  ['Country-wide leaderboard', 'Climb the board for each mock. Show your name or stay hidden, you choose.'],
+  ['Revision notebook', 'Bookmark a question during or after a test. Your notebook groups them by topic so revision is one tap away.'],
+  ['Progress tracker', 'Marks, accuracy and percentile across all your attempts, with your strongest and weakest chapters in one view.'],
+  ['Practice plan', 'A short plan built from your own attempt: what to revise and which questions to re-attempt.'],
+  ['Pick your timer', 'Run the full three hours, or set a shorter clock for sectionals and drills.'],
 ] as const
 const STEPS = [
   ['Get started with your email', 'Enter your email and tap the link we send. No password, no long forms. Your profile is ready in seconds.'],
-  ['Pick a mock', 'Choose an event, read the marking scheme and reserve your seat for ₹11.'],
+  ['Pick a mock', 'Choose a test, read the marking scheme and the chapters it covers, then unlock it for ₹11.'],
   ['Take it like the real exam', 'Full-screen, timed, JEE-style. Answers autosave and the server keeps the clock.'],
-  ['Get your report', 'Marks, rank, percentile, time analysis and a practice plan. Add the full analysis for ₹29.'],
-  ['Track your growth', 'Your profile keeps every attempt, so you can see your score and rank improve mock after mock.'],
+  ['Open your analysis', 'Add the full analysis for ₹49: every mistake by chapter and topic, time per question, slow-but-wrong list and a practice plan.'],
+  ['Compare, revise, repeat', 'Check your rank, percentile and the leaderboard, bookmark questions to revise, and watch your progress build mock after mock.'],
 ]
+const TESTS = [
+  ['Full-length mocks', 'Physics, Chemistry and Mathematics in one three-hour sitting, with the marking scheme shown first.'],
+  ['Class 11 and 12 part tests', 'Cover one year of the syllabus at a time and find what you have let slip.'],
+  ['Sectional tests', 'One subject, one sitting. Build speed and accuracy where you are weakest.'],
+  ['Chapter tests', 'Short drills on a single chapter, ideal for the week after you finish a topic.'],
+] as const
+const CMP = [
+  ['Full-length JEE-style mock', 1, 1], ['Server-timed, autosaved attempt', 1, 1], ['Marks, rank and percentile', 1, 1],
+  ['Country-wide leaderboard', 1, 1], ['Revision notebook and progress tracker', 1, 1],
+  ['Every mistake mapped to chapter and topic', 0, 1], ['Time spent on each question', 0, 1],
+  ['Slow-but-wrong questions', 0, 1], ['Personal practice plan', 0, 1],
+] as const
 const PLANS = [
-  { n: 'Mock test', p: PRICE.mock, d: 'per mock', pts: ['Full-length JEE-style mock', 'Server-timed attempt with autosave', 'Marks, rank and percentile', 'Leaderboard access'], hi: false },
-  { n: 'Mock + full analysis', p: PRICE.analysis, d: 'per mock', pts: ['Everything in Mock test', 'Subject and topic breakdown', 'Time per question and slow-but-wrong list', 'Personal practice plan'], hi: true },
-  { n: 'Season pass', p: PRICE.pass, d: 'all mocks in the season', pts: ['Every mock event, with analysis', 'Progress tracking across mocks', 'Priority seats at every event', 'Best value for regular practice'], hi: false },
+  { n: 'Mock test', p: PRICE.mock, d: 'per mock', pts: ['Full-length JEE-style mock', 'Server-timed attempt with autosave', 'Marks, rank and percentile', 'Country-wide leaderboard'], hi: false },
+  { n: 'Mock + full analysis', p: PRICE.analysis, d: 'per mock', pts: ['Everything in Mock test', 'Every mistake by chapter and topic', 'Time spent on each question', 'Slow-but-wrong list and practice plan'], hi: true },
 ]
 const LB = [[1, 'Student A', 'Aarav', 248, 99.4], [2, 'Student B', 'Diya', 241, 98.7], [3, 'Student C', 'Kabir', 236, 97.9], [4, 'You', 'Your row', 221, 94.2], [5, 'Student D', 'Meera', 214, 92.5]] as const
 const FAQ = [
   ['Is this the official NTA exam?', 'No. This is an independent practice platform with a JEE-style interface. It is not affiliated with or endorsed by the NTA.'],
   ['How do I sign up?', 'Tap Get started, enter your email and open the link we send you. That signs you in. There is no password to remember.'],
-  ['What do I get for ₹11 and ₹29?', `₹${PRICE.mock} gets you a full mock with your marks, rank and percentile. ₹${PRICE.analysis} adds the complete analysis: subject and topic breakdown, time per question and a practice plan.`],
-  ['How is the paper marked?', 'Each mock follows the official marking scheme, shown on the event page before you begin.'],
-  ['How are rank and percentile worked out?', 'Among everyone who attempted the same mock. Percentile is the share of students you scored above. They become more meaningful as more students attempt each mock.'],
-  ['What happens if my internet drops?', 'Your answers are autosaved. Reconnect, reopen the mock and continue. The timer is kept by the server.'],
+  ['What do I get for ₹11 and ₹49?', `₹${PRICE.mock} unlocks one full mock with your marks, rank, percentile and leaderboard. ₹${PRICE.analysis} adds the complete analysis for that mock: every mistake by chapter and topic, time per question, slow-but-wrong list and a practice plan.`],
+  ['Is the screen the same as the real JEE Main?', 'It is modelled on the JEE Main computer-based format: question palette, section tabs, mark for review and a countdown. We do not claim it is identical.'],
+  ['Which subjects and topics are covered?', 'Physics, Chemistry and Mathematics across the JEE Main syllabus. Each test lists its chapters before you begin.'],
+  ['How is the paper marked?', 'Each mock follows the official marking scheme, shown on the test page before you begin.'],
+  ['What does the full analysis include?', 'Accuracy by subject, chapter and topic, your mistakes grouped by type, time spent on every question, the slow-but-wrong list and a short practice plan.'],
+  ['How does the revision notebook work?', 'Bookmark any question while you test or when you review. The notebook groups them by topic so you can revise them later.'],
+  ['Is this a subscription?', 'No. You pay per mock, ₹11 or ₹49. There is nothing to cancel.'],
+  ['How are rank and percentile worked out?', 'Among everyone on the platform who submitted the same mock. Percentile is the share of students you scored above. It is a practice ranking, and it becomes more meaningful as more students attempt each mock.'],
+  ['What happens if my internet drops?', 'Your answers are autosaved. Reconnect, reopen the mock and continue. The timer is kept by the server, so the deadline does not move.'],
   ['Can I hide my name on the leaderboard?', 'Yes. You choose whether your name is shown.'],
-  ['Which devices can I use?', 'A laptop or desktop is best for the full exam feel. Tablets work too.'],
-  ['How does the season pass work?', 'One payment covers every mock event in the season, each with the full analysis.'],
+  ['Which devices can I use?', 'A laptop or desktop is best for a full paper. Tablets work too, and phones suit short sectional and chapter tests.'],
   ['I am under 18. Can I join?', 'Please ask a parent or guardian before signing up.'],
+  ['How do I contact support?', 'Write to us from the Contact page and we will reply by email.'],
 ]
 
 function Signup({ onClose }: { onClose: () => void }) {
@@ -104,7 +123,7 @@ export default function JeeLanding() {
             <h1>The mock test that feels like the <em>real JEE.</em></h1>
             <p className="jx-lead">Take full-length JEE-style mocks, then see your marks, rank, percentile and a complete analysis of where you gained and lost marks.</p>
             <div className="jx-hero-cta"><button className="jx-cta" onClick={start}>Get started with your email</button><a href="#how" className="jx-ghost">See how it works</a></div>
-            <div className="jx-chips"><span>Mock test ₹{PRICE.mock}</span><span>Full analysis ₹{PRICE.analysis}</span><span>Season pass ₹{PRICE.pass}</span></div>
+            <div className="jx-chips"><span>Mock test ₹{PRICE.mock}</span><span>Full analysis ₹{PRICE.analysis}</span></div>
             <p className="jx-small">Try the interface on the right. It is a sample, not a real paper.</p>
           </div>
           <ExamDemo />
@@ -127,6 +146,12 @@ export default function JeeLanding() {
         </div>
       </div></section>
 
+      <section className="jx-sec" id="tests"><div className="jx-wrap">
+        <h2 className="jx-rv">Four ways to practise</h2>
+        <p className="jx-sub jx-rv">Match the test to the time you have.</p>
+        <div className="jx-tests">{TESTS.map(([t, d], i) => <div className="jx-test jx-rv" style={{ transitionDelay: `${(i % 4) * 80}ms` }} key={t}><b>{t}</b><p>{d}</p></div>)}</div>
+      </div></section>
+
       <section className="jx-sec" id="pricing"><div className="jx-wrap">
         <h2 className="jx-rv">Simple pricing</h2>
         <p className="jx-sub jx-rv">Pay only for what you use. No hidden charges.</p>
@@ -137,6 +162,12 @@ export default function JeeLanding() {
             <ul>{p.pts.map((x) => <li key={x}>{x}</li>)}</ul>
             <button className={p.hi ? 'jx-cta' : 'jx-outline'} onClick={start}>Get started</button>
           </div>))}</div>
+      </div></section>
+
+      <section className="jx-sec"><div className="jx-wrap jx-narrow">
+        <h2 className="jx-rv">What each price includes</h2>
+        <div className="jx-scroll jx-rv"><table className="jx-cmp"><thead><tr><th>Feature</th><th>Mock ₹{PRICE.mock}</th><th>Mock + analysis ₹{PRICE.analysis}</th></tr></thead>
+          <tbody>{CMP.map(([f, a, b]) => <tr key={f}><td>{f}</td><td className={a ? 'y' : 'n'}>{a ? '✓' : '–'}</td><td className={b ? 'y' : 'n'}>{b ? '✓' : '–'}</td></tr>)}</tbody></table></div>
       </div></section>
 
       <section className="jx-sec alt" id="report"><div className="jx-wrap">
