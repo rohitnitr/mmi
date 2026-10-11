@@ -132,7 +132,7 @@ export default function JeeLanding() {
   useEffect(() => { if (!err) return; const t = setTimeout(() => setErr(''), 6000); return () => clearTimeout(t) }, [err])
 
   async function start() {
-    if (signedIn) { window.location.href = '/jee/welcome'; return }
+    if (signedIn) { window.location.href = '/jee/dashboard'; return }
     const c = getClient()
     if (!c) { setErr('Sign-in is unavailable right now. Please try again in a moment.'); return }
     setBusy(true); setErr('')

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
-// Google sign-in lands here: create the session, save the Google name to the JEE profile, go to /jee/welcome.
+// Google sign-in lands here: create the session, save the Google name to the JEE profile, go to /jee/dashboard.
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url)
   const code = searchParams.get('code')
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       } catch (e) {
         console.error('[jee callback] profile upsert failed', e)
       }
-      return NextResponse.redirect(`${origin}/jee/welcome`)
+      return NextResponse.redirect(`${origin}/jee/dashboard`)
     }
   }
   return NextResponse.redirect(`${origin}/jee?signin=failed`)

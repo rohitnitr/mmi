@@ -101,3 +101,11 @@
 @media (max-width:900px){.jx-herogrid{grid-template-columns:1fr}.jx-exam{transform:none}.jx-feats,.jx-res{grid-template-columns:1fr 1fr}.jx-four{grid-template-columns:1fr 1fr}.jx-rcols{grid-template-columns:1fr}.jx-how,.jx-plans,.jx-voices{grid-template-columns:1fr}.jx-fgrid{grid-template-columns:1fr 1fr}}
 @media (max-width:620px){.jx-exam-body{grid-template-columns:1fr}.jx-q{border-right:0;border-bottom:1px solid var(--line)}.jx-feats,.jx-four,.jx-res,.jx-fgrid{grid-template-columns:1fr}.jx-founder{grid-template-columns:1fr;text-align:center}.jx-ph{margin:0 auto}.jx-soc{justify-content:center}}
 @media (prefers-reduced-motion:reduce){.jx-blob,.jx h1 em,.jx-ticker div,.jx-prog,.jx-how-panel{animation:none}.jx-rv{opacity:1;transform:none;transition:none}.jx-bar i{width:var(--w);transition:none}.jx-times i{height:var(--h);transition:none}}
+/* dashboard */
+@media (prefers-color-scheme:dark){.jx.auto{--bg:#0A0F1C;--bg2:#0E1526;--card:#131B2E;--ink:#E6EDF7;--mut:#9AA9C0;--line:#243049;--soft:#1B2640;--link:#7FA8FF;--shadow:rgba(0,0,0,.45)}}
+.jd-top{display:flex;align-items:center;gap:16px;margin-bottom:24px}.jd-av{width:64px;height:64px;border-radius:50%;object-fit:cover;flex:none}.jd-ini{display:grid;place-items:center;background:linear-gradient(135deg,#2563EB,#7C3AED);color:#fff;font-size:26px;font-weight:800}
+.jx h1.jd-h1{font-size:clamp(26px,4vw,36px);margin:0}.jx h2.jd-h2{font-size:22px;margin:36px 0 14px}
+.jd-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.jd-tile{padding:18px;border:1px solid var(--line);border-radius:18px;background:var(--card)}.jd-tile span{display:block;font-size:13px;color:var(--mut);margin-bottom:6px}.jd-tile b{font-size:26px;letter-spacing:-.02em}
+.jd-list{display:grid;gap:12px}.jd-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:var(--card)}.jd-row p{margin:2px 0 0;color:var(--mut);font-size:14px}
+.jd-empty{padding:22px;border:1px dashed var(--line);border-radius:16px;background:var(--card)}.jd-empty p{margin:4px 0 0;color:var(--mut);font-size:14px}
+@media (max-width:760px){.jd-tiles{grid-template-columns:1fr 1fr}.jd-row{flex-direction:column;align-items:flex-start}}
