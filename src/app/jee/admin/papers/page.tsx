@@ -19,15 +19,15 @@ export default async function PapersAdmin() {
 
   const admin = getSupabaseAdmin()
   const [t, q, p, a] = await Promise.all([
-    admin.from('jee_tests').select('id,title,kind,status,duration_minutes,created_at').order('created_at', { ascending: false }),
+    admin.from('jee_tests').select('id,title,kind,status,duration_minutes,category,display_order,created_at').order('display_order', { ascending: true }).order('created_at', { ascending: false }),
     admin.from('jee_questions').select('test_id'),
     admin.from('jee_purchases').select('test_id').eq('status', 'paid'),
     admin.from('jee_attempts').select('test_id'),
   ])
   const tally = (rows: { test_id: string }[] | null) => { const m = new Map<string, number>(); for (const r of rows ?? []) m.set(r.test_id, (m.get(r.test_id) ?? 0) + 1); return m }
   const qn = tally(q.data as { test_id: string }[] | null), pn = tally(p.data as { test_id: string }[] | null), an = tally(a.data as { test_id: string }[] | null)
-  const tests: TestRowInfo[] = ((t.data ?? []) as { id: string; title: string; kind: string; status: string; duration_minutes: number }[]).map((x) => ({
-    id: x.id, title: x.title, kind: x.kind, status: x.status, minutes: x.duration_minutes, questions: qn.get(x.id) ?? 0, purchases: pn.get(x.id) ?? 0, attempts: an.get(x.id) ?? 0,
+  const tests: TestRowInfo[] = ((t.data ?? []) as { id: string; title: string; kind: string; status: string; duration_minutes: number; category?: string; display_order?: number }[]).map((x) => ({
+    id: x.id, title: x.title, kind: x.kind, status: x.status, minutes: x.duration_minutes, questions: qn.get(x.id) ?? 0, purchases: pn.get(x.id) ?? 0, attempts: an.get(x.id) ?? 0, category: x.category, display_order: x.display_order,
   }))
   return <PaperBuilder tests={tests} />
 }

@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 export async function getAdmin() {
   const sb = await createClient()
   const { data: { user } } = await sb.auth.getUser()
-  const list = (process.env.JEE_ADMIN_EMAILS ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+  const rawList = process.env.JEE_ADMIN_EMAILS ?? process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? ''
+  const list = rawList.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
   const ok = !!user?.email && list.includes(user.email.toLowerCase())
   return { user, ok }
 }

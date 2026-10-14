@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   const user = await currentUser()
   if (!user) return fail('Please sign in again.', 401)
 
-  const keyId = process.env.RAZORPAY_KEY_ID
+  const keyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
   const keySecret = process.env.RAZORPAY_KEY_SECRET
   if (!keyId || !keySecret) return fail('Payments are not switched on yet. Please try again later.', 503)
 
@@ -28,10 +28,14 @@ export async function POST(req: NextRequest) {
 
   const st = (await loadStates(user.id)).find((s) => s.test.id === testId)
   if (!st) return fail('This mock is not available right now.', 404)
-  if (tier === 'mock' && st.hasMock) return fail('You already own this mock.', 409)
-  if (tier === 'analysis' && st.hasAnalysis) return fail('You already have the analysis for this mock.', 409)
+  if (st.test.is_free) return fail('This mock is completely free! You can start it right away without payment.', 400)
 
-  const amount = tier === 'mock' ? PRICE_PAISE.mock : st.analysisPaise
+  // Only block if student owns it AND hasn't finished the attempt. If attempt === 'done', they are allowed to buy again!
+  if (tier === 'mock' && st.hasMock && st.attempt !== 'done') return fail('You already have an active attempt for this mock.', 409)
+  if (tier === 'analysis' && st.hasAnalysis && st.attempt !== 'done') return fail('You already have the analysis for this mock.', 409)
+
+  const defaultMockPrice = st.test.price_paise && st.test.price_paise > 0 ? st.test.price_paise : PRICE_PAISE.mock
+  const amount = tier === 'mock' ? defaultMockPrice : st.analysisPaise
 
   const res = await fetch('https://api.razorpay.com/v1/orders', {
     method: 'POST',

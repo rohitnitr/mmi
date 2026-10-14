@@ -3,14 +3,33 @@
 export const PRICE_PAISE = { mock: 1100, analysis: 4900, upgrade: 3800 } as const // upgrade = analysis for someone who already owns the mock
 export type Tier = 'mock' | 'analysis'
 
-export type TestRow = { id: string; title: string; kind: string; class_level: number | null; duration_minutes: number }
+export type TestRow = {
+  id: string
+  title: string
+  kind: string
+  class_level: number | null
+  duration_minutes: number
+  category?: string | null
+  sub_category?: string | null
+  topic?: string | null
+  pyq_year?: number | null
+  pyq_date?: string | null
+  pyq_shift?: string | null
+  is_free?: boolean
+  display_order?: number
+  price_paise?: number
+}
+
 export type TestState = {
   test: TestRow
   hasMock: boolean // may take this test, or already has
   hasAnalysis: boolean // full analysis unlocked
   attempt: 'none' | 'in_progress' | 'done'
-  canStart: boolean // paid and not finished yet
+  canStart: boolean // paid/free and not finished yet
   analysisPaise: number // what this student would pay for analysis right now
+  score?: number | null
+  percentile?: number | null
+  rank?: number | null
 }
 
 export const rupees = (paise: number) => `\u20b9${paise / 100}`

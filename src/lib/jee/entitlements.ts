@@ -10,28 +10,42 @@ export async function getStudent(userId: string): Promise<Student | null> {
 }
 
 // One row per live test, with what this student owns and whether the attempt is finished.
-// Rule: paying unlocks the test once. After the attempt is submitted (or expires) the test locks again.
+// Rule: paying unlocks the test. Free tests are accessible directly. Completed tests can be retaken with "Buy Again".
 export async function loadStates(userId: string): Promise<TestState[]> {
   const admin = getSupabaseAdmin()
-  const [t, p, a] = await Promise.all([
-    admin.from('jee_tests').select('id,title,kind,class_level,duration_minutes').eq('status', 'live').order('created_at', { ascending: false }),
+  const [t, p, a, res] = await Promise.all([
+    admin
+      .from('jee_tests')
+      .select('id,title,kind,class_level,duration_minutes,category,sub_category,topic,pyq_year,pyq_date,pyq_shift,is_free,display_order,price_paise')
+      .eq('status', 'live')
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: false }),
     admin.from('jee_purchases').select('test_id,tier').eq('user_id', userId).eq('status', 'paid'),
-    admin.from('jee_attempts').select('test_id,status').eq('user_id', userId),
+    admin.from('jee_attempts').select('test_id,status,started_at,attempt_number').eq('user_id', userId).order('started_at', { ascending: false }),
+    admin.from('jee_results').select('test_id,marks').eq('user_id', userId).order('submitted_at', { ascending: false }),
   ])
-  for (const q of [t, p, a]) if (q.error) console.error('[jee] loadStates', q.error.message)
+  for (const q of [t, p, a, res]) if (q.error) console.error('[jee] loadStates', q.error.message)
 
   const paid = (p.data ?? []) as { test_id: string; tier: string }[]
-  const attempts = (a.data ?? []) as { test_id: string; status: string }[]
+  const attempts = (a.data ?? []) as { test_id: string; status: string; started_at: string; attempt_number?: number }[]
+  const results = (res.data ?? []) as { test_id: string; marks: number }[]
 
   return ((t.data ?? []) as TestRow[]).map((test) => {
-    const hasAnalysis = paid.some((x) => x.test_id === test.id && x.tier === 'analysis')
-    const hasMock = hasAnalysis || paid.some((x) => x.test_id === test.id && x.tier === 'mock')
-    const att = attempts.find((x) => x.test_id === test.id)
+    const isFree = Boolean(test.is_free)
+    const hasAnalysis = isFree || paid.some((x) => x.test_id === test.id && x.tier === 'analysis')
+    const hasMock = isFree || hasAnalysis || paid.some((x) => x.test_id === test.id && x.tier === 'mock')
+    const att = attempts.find((x) => x.test_id === test.id) // latest because of order('started_at', { ascending: false })
     const attempt: TestState['attempt'] = !att ? 'none' : att.status === 'in_progress' ? 'in_progress' : 'done'
+    const lastResult = results.find((r) => r.test_id === test.id)
+
     return {
-      test, hasMock, hasAnalysis, attempt,
-      canStart: hasMock && attempt !== 'done',
-      analysisPaise: hasAnalysis ? 0 : hasMock ? PRICE_PAISE.upgrade : PRICE_PAISE.analysis,
+      test,
+      hasMock,
+      hasAnalysis,
+      attempt,
+      canStart: isFree ? attempt !== 'in_progress' : (hasMock && attempt !== 'done'),
+      analysisPaise: hasAnalysis ? 0 : hasMock ? PRICE_PAISE.upgrade : (test.price_paise ? test.price_paise + 3800 : PRICE_PAISE.analysis),
+      score: lastResult ? lastResult.marks : null,
     }
   })
 }

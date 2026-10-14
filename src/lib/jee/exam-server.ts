@@ -26,23 +26,32 @@ export async function currentUser() {
   return data.user
 }
 
-export type TestInfo = { id: string; title: string; duration_minutes: number; status: string }
-export type AttemptRow = { id: string; user_id: string; test_id: string; started_at: string; deadline_at: string; submitted_at: string | null; status: 'in_progress' | 'submitted' | 'expired' }
+export type TestInfo = { id: string; title: string; duration_minutes: number; status: string; is_free?: boolean }
+export type AttemptRow = { id: string; user_id: string; test_id: string; started_at: string; deadline_at: string; submitted_at: string | null; status: 'in_progress' | 'submitted' | 'expired'; attempt_number?: number }
 
 export async function getTest(db: SupabaseClient, testId: string): Promise<TestInfo | null> {
-  const { data } = await db.from('jee_tests').select('id,title,duration_minutes,status').eq('id', testId).maybeSingle()
+  const { data } = await db.from('jee_tests').select('id,title,duration_minutes,status,is_free').eq('id', testId).maybeSingle()
   return (data as TestInfo | null) ?? null
 }
 
-/** Either tier (mock or analysis) lets a student sit the test. */
+/** Either tier (mock or analysis) lets a student sit the test. Free tests can be taken directly. */
 export async function paidTiers(db: SupabaseClient, userId: string, testId: string): Promise<{ mock: boolean; analysis: boolean }> {
+  const { data: test } = await db.from('jee_tests').select('is_free').eq('id', testId).maybeSingle()
+  const isFree = Boolean(test?.is_free)
   const { data } = await db.from('jee_purchases').select('tier').eq('user_id', userId).eq('test_id', testId).eq('status', 'paid')
   const tiers = ((data ?? []) as { tier: string }[]).map((r) => r.tier)
-  return { mock: tiers.length > 0, analysis: tiers.includes('analysis') }
+  return { mock: isFree || tiers.length > 0, analysis: isFree || tiers.includes('analysis') }
 }
 
 export async function getAttempt(db: SupabaseClient, userId: string, testId: string): Promise<AttemptRow | null> {
-  const { data } = await db.from('jee_attempts').select('*').eq('user_id', userId).eq('test_id', testId).maybeSingle()
+  const { data } = await db
+    .from('jee_attempts')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('test_id', testId)
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
   return (data as AttemptRow | null) ?? null
 }
 

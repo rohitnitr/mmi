@@ -24,11 +24,18 @@ export async function POST(req: Request) {
   if (!count) return NextResponse.json({ error: 'This mock has no questions yet.' }, { status: 409 })
 
   let attempt = await getAttempt(db, user.id, testId)
-  if (!attempt) {
+  if (!attempt || attempt.status !== 'in_progress') {
+    const nextNum = attempt ? ((attempt as { attempt_number?: number }).attempt_number || 1) + 1 : 1
     const deadline = new Date(Date.now() + test.duration_minutes * 60_000).toISOString()
-    const { error } = await db.from('jee_attempts').insert({ user_id: user.id, test_id: testId, deadline_at: deadline })
+    const { error } = await db.from('jee_attempts').insert({
+      user_id: user.id,
+      test_id: testId,
+      deadline_at: deadline,
+      attempt_number: nextNum,
+      status: 'in_progress',
+    })
     if (error && error.code !== '23505') return NextResponse.json({ error: 'Could not start. Try again.' }, { status: 500 })
-    attempt = await getAttempt(db, user.id, testId) // also covers a double-click race (unique violation)
+    attempt = await getAttempt(db, user.id, testId) // picks the latest in_progress attempt
   }
   if (!attempt) return NextResponse.json({ error: 'Could not start. Try again.' }, { status: 500 })
   return NextResponse.json({ attemptId: attempt.id, status: attempt.status })

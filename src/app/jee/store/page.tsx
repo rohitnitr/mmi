@@ -18,12 +18,18 @@ export default async function Store() {
   return (
     <div className="jx auto">
       <header className="jx-nav">
-        <a href="/jee/dashboard" className="jx-brand">MatchMyInterview <span>· JEE</span></a>
-        <div className="jx-navr"><a href="/jee/dashboard" className="jx-navlink">My dashboard</a><SignOut /></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <a href="/jee/dashboard" className="jx-brand">MatchMyInterview <span>· JEE</span></a>
+          <span style={{ fontSize: 11, background: 'rgba(37,99,235,0.2)', color: '#60A5FA', padding: '3px 10px', borderRadius: 99, fontWeight: 800 }}>
+            ★ NITian Series
+          </span>
+        </div>
+        <div className="jx-navr">
+          <a href="/jee/dashboard" className="jx-navlink">My Dashboard</a>
+          <SignOut />
+        </div>
       </header>
       <main className="jx-sec js-page"><div className="jx-wrap">
-        <h1 className="jd-h1">Pick your mock</h1>
-        <p className="jx-sub" style={{ margin: '6px 0 0' }}>The real JEE-style experience, from {'\u20b9'}11. Pay once per mock, no subscription.</p>
         <StoreClient states={states} />
       </div></main>
     </div>

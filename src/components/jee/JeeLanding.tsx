@@ -3,6 +3,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import ExamDemo from './ExamDemo'
+import {
+  NITIAN_FULL_MOCKS,
+  CLASS_WISE_MOCKS,
+  SUBJECT_WISE_MOCKS,
+  TOPIC_TREE,
+  PYQ_YEAR_DATA,
+} from '@/lib/jee/catalog-data'
+import { rupees } from '@/lib/jee/shared'
 import './jee.css'
 
 // ---- Edit only this block -------------------------------------------------
@@ -12,85 +20,56 @@ const FOUNDER = {
   name: 'Rohit Poddar',
   role: 'Founder, MatchMyInterview',
   school: 'NIT Rourkela graduate',
-  bio: 'Rohit builds MatchMyInterview and is building these mocks so that every JEE aspirant can afford regular, exam-like practice, not just the students who can pay for a coaching test series.',
-  photo: '/founder.jpg', // put your photo at public/founder.jpg
+  bio: 'Rohit builds MatchMyInterview and personally curated these mock test series alongside fellow top NITians so that every aspiring engineer can practice on genuine exam-grade questions with real NTA simulation, without paying thousands for corporate coaching series.',
+  photo: '/founder.jpg',
   links: [
     { label: 'GitHub', href: 'https://github.com/rohitnitr' },
     { label: 'LinkedIn', href: 'https://www.linkedin.com/in/rohitnitr/' },
   ] as { label: string; href: string; stat?: string }[],
 }
 
-// Real endorsements only. The "Voices" section stays hidden while this list is empty.
 const TESTIMONIALS: { name: string; role: string; quote: string }[] = []
 // ---------------------------------------------------------------------------
 
-const NAV = [['Home', '#home'], ['Features', '#features'], ['Pricing', '#pricing'], ['Try the demo', '#demo'], ['Resources', '#resources'], ['FAQ', '#faq']]
-const TICKER = ['Physics', 'Chemistry', 'Mathematics', 'Full-length mocks', 'Question palette', 'Time analysis', 'Rank & percentile', 'Leaderboard', 'Mistake analyzer', 'Chapter tests']
+const NAV = [
+  ['Home', '#home'],
+  ['NITian Mocks', '#catalog'],
+  ['Features', '#features'],
+  ['Pricing', '#pricing'],
+  ['Try Demo', '#demo'],
+  ['FAQ', '#faq'],
+]
+const TICKER = [
+  'Curated by NITians',
+  'Level 1 Beginner',
+  'Level 2 Intermediate',
+  'Level 3 Advanced',
+  'Class 11 & 12 Mocks',
+  'Dropper Special',
+  'Topic Trees',
+  'Free PYQs 2020-2026',
+  'Rank & Percentile',
+  'Mistake Analyzer',
+]
 const FEATURES = [
-  ['JEE-style exam screen', 'Question palette with five states, section navigation and a countdown timer, laid out the way you will meet it on exam day.'],
-  ['Server-timed attempts', 'The clock runs on our server, so a refresh or a bad connection never gives anyone extra time.'],
-  ['Autosave and resume', 'Every answer is saved as you go. Reload the page and pick up exactly where you were.'],
-  ['Mistake analyzer', 'Every wrong answer is mapped to its chapter and topic, so revision goes where marks were lost.'],
-  ['Chapter and topic reports', 'Subject, chapter and topic breakdowns after each attempt: accuracy, attempts and negatives.'],
-  ['Time per question', 'Spot the questions you rushed, the ones that ate your time and the slow-but-wrong ones.'],
-  ['Revision notebook', 'Bookmark questions while you practise and come back to them sorted by topic.'],
-  ['Progress tracker', 'Score, accuracy and chapter strength across every attempt, on one page in your profile.'],
-  ['Full, part, sectional, chapter', 'Full-syllabus mocks, Class 11 or 12 part tests, sectional tests and chapter tests.'],
-  ['A timer you can pick', 'Short bursts for a chapter, or the full three hours for a complete mock.'],
-  ['Marks, rank and percentile', 'Your marks, your rank and your percentile among students who took the same mock here.'],
-  ['Leaderboard, your choice', 'See where you stand on every mock. Show your name or stay hidden.'],
+  ['Questions Selected by NITians', 'Handpicked and formulated by NIT Rourkela alumni to simulate exact NTA shift difficulty, question distribution, and tricky concept traps.'],
+  ['Real NTA-Style Exam Screen', 'Question palette with all five official states, section toggling, and countdown timer, built precisely how you will experience it on exam day.'],
+  ['Server-Timed Attempts', 'The clock runs securely on our server, so accidental refreshes or slow connections never compromise your real attempt timing.'],
+  ['Autosave & Resume', 'Every answer and bookmark is preserved automatically as you navigate. Disconnections never lose your work.'],
+  ['Mistake & Trap Analyzer', 'Pinpoints exactly which chapters, topics, and question types cost you marks so your revision is laser-focused.'],
+  ['Time-Per-Question Breakdown', 'Identifies the questions you rushed, those that ate up your time, and the dangerous slow-but-wrong traps.'],
+  ['Class 11, 12 & Dropper Focus', 'Modular syllabus options: complete 3-hour mocks, Class 11 backlog busters, or single-subject sprint tests.'],
+  ['50+ Free PYQs (2020-2026)', 'Every official morning and evening shift paper from 2020 to 2026 organized by year, date, and shift for 100% free practice.'],
+  ['Nationwide Rank & Percentile', 'Live rank and percentile calculated among all peer candidates taking the same mock across India.'],
+  ['No Locked Subscriptions', 'Take individual mocks from ₹11. Never pay hefty upfront fees for tests you don’t have time to finish.'],
 ] as const
-const FOUR = [
-  ['Full-length mock', 'Physics, Chemistry and Mathematics in one sitting, with the marking scheme shown first.'],
-  ['Class 11 or 12 part test', 'Test only the half of the syllabus you have finished.'],
-  ['Sectional test', 'One subject at a time, when you want to fix a single weak area.'],
-  ['Chapter test', 'A short timed set on one chapter, to check a topic before moving on.'],
-] as const
+
 const STEPS = [
-  ['Get started with Google', 'One tap. We use the name and photo from your Google account, so there is no form and no password.'],
-  ['Pick a mock', 'Choose a mock, read the marking scheme and pay \u20b911 to take it.'],
-  ['Take it like the real exam', 'Full-screen, timed, JEE-style. Answers autosave and the server keeps the clock.'],
-  ['Get your report', 'Marks, rank and percentile straight away. Add the full analysis for \u20b949.'],
-  ['Track your growth', 'Your profile keeps every attempt, so you can watch your score and rank climb mock after mock.'],
-]
-const PLANS = [
-  { n: 'Mock test', p: PRICE.mock, pts: ['Full-length JEE-style mock', 'Server-timed attempt with autosave', 'Marks, rank and percentile', 'Leaderboard access'], hi: false },
-  { n: 'Mock + full analysis', p: PRICE.analysis, pts: ['Everything in Mock test', 'Every mistake by chapter and topic', 'Time spent on each question', 'Slow-but-wrong list and practice plan'], hi: true },
-]
-const CMP: [string, boolean, boolean][] = [
-  ['Full-length JEE-style mock', true, true],
-  ['Server-timed attempt with autosave', true, true],
-  ['Marks, rank and percentile', true, true],
-  ['Leaderboard', true, true],
-  ['Mistakes by chapter and topic', false, true],
-  ['Time spent on every question', false, true],
-  ['Slow-but-wrong list', false, true],
-  ['Personal practice plan', false, true],
-]
-const RESOURCES = [
-  ['Revision notes', 'Short chapter notes for Physics, Chemistry and Mathematics.'],
-  ['Formula sheets', 'One-page formula sheets, chapter by chapter.'],
-  ['Previous-year questions', 'Past JEE Main questions sorted by chapter.'],
-  ['Top questions', 'High-yield questions to revisit before a mock.'],
-  ['Chapter-wise mocks', 'Previous-year questions arranged as timed tests.'],
-] as const
-const LB = [[1, 'Student A', 248, 99.4], [2, 'Student B', 241, 98.7], [3, 'Student C', 236, 97.9], [4, 'You', 221, 94.2], [5, 'Student D', 214, 92.5]] as const
-const FAQ: [string, string][] = [
-  ['Is this the official NTA exam?', 'No. This is an independent practice platform with a JEE-style interface. It is not affiliated with or endorsed by the NTA.'],
-  ['How do I sign up?', 'Tap Get started and choose your Google account. That is all. There is no password and no form to fill.'],
-  ['What do you take from my Google account?', 'Your name, email address and profile photo. We use them to set up your profile. Your name appears on the leaderboard only if you choose to show it.'],
-  ['What do I get for \u20b911 and \u20b949?', `\u20b9${PRICE.mock} gets you a full mock with your marks, rank and percentile. \u20b9${PRICE.analysis} adds the complete analysis: mistakes by chapter and topic, time per question, the slow-but-wrong list and a practice plan.`],
-  ['Is there a subscription?', 'No. You pay per mock. Nothing renews and nothing is charged in the background.'],
-  ['How close is the screen to the real JEE Main?', 'It is modelled on it: the same palette states, the same section flow and a countdown timer. It is not an exact copy, and it is not run by the NTA.'],
-  ['How is the paper marked?', 'Each mock follows the marking scheme shown on its page before you begin.'],
-  ['How are rank and percentile worked out?', 'Among everyone on this platform who submitted the same mock. They become more meaningful as more students attempt each mock.'],
-  ['What does "nationwide" mean here?', 'Students from across the country who use this platform. It is not a comparison with every JEE candidate.'],
-  ['What happens if my internet drops?', 'Your answers are autosaved. Reconnect, reopen the mock and continue. The timer is kept by the server.'],
-  ['Can I hide my name on the leaderboard?', 'Yes. You decide whether your name is shown.'],
-  ['What are part, sectional and chapter tests?', 'Part tests cover Class 11 or Class 12 only. Sectional tests are one subject. Chapter tests are a short set on one chapter.'],
-  ['When do notes, formula sheets and PYQs arrive?', 'They are being added now and are marked Coming soon on this page until they are live.'],
-  ['Which devices can I use?', 'A laptop or desktop is best for the full exam feel. Tablets work too.'],
-  ['I am under 18. Can I join?', 'Please ask a parent or guardian before signing up.'],
+  ['Sign in with Google', 'One tap. Zero passwords and no long forms to fill.'],
+  ['Pick Your Mock or Free PYQ', 'Choose an NITian 3-level mock, class-wise test, or free past-year shift paper.'],
+  ['Take the Exam', 'Full-screen, strictly timed NTA interface with live question palette and autosave.'],
+  ['Instant Score & Percentile', 'Marks, negative loss, percentile, and rank generated the second you submit.'],
+  ['Unlock In-Depth Analysis', 'Optionally add the ₹49 complete mistake breakdown, chapter weakness map, and redo plan.'],
 ]
 
 export default function JeeLanding() {
@@ -102,12 +81,18 @@ export default function JeeLanding() {
   const [signedIn, setSignedIn] = useState(false)
   const [photoOk, setPhotoOk] = useState(true)
 
+  // Catalog Preview State
+  const [previewTab, setPreviewTab] = useState<'premium' | 'free'>('premium')
+  const [previewSubject, setPreviewSubject] = useState<'Physics' | 'Chemistry' | 'Mathematics'>('Physics')
+  const [previewYear, setPreviewYear] = useState<number>(2026)
+
   useEffect(() => {
     let t: string | null = null
     try { t = localStorage.getItem('jx-theme') } catch { /* private mode */ }
     if (t === 'dark' || t === 'light') setTheme(t)
     else if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) setTheme('dark')
   }, [])
+
   const flip = () => {
     const n = theme === 'dark' ? 'light' : 'dark'
     setTheme(n)
@@ -115,179 +100,721 @@ export default function JeeLanding() {
   }
 
   useEffect(() => {
-    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target) } }), { threshold: 0.12 })
+    const io = new IntersectionObserver(
+      (es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target) } }),
+      { threshold: 0.12 }
+    )
     root.current?.querySelectorAll('.jx-rv').forEach((el) => io.observe(el))
     return () => io.disconnect()
   }, [])
-  useEffect(() => { const t = setInterval(() => setStep((s) => (s + 1) % STEPS.length), 4500); return () => clearInterval(t) }, [])
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('signin') === 'failed') setErr('Sign-in did not complete. Please try again.')
+    const t = setInterval(() => setStep((s) => (s + 1) % STEPS.length), 4500)
+    return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('signin') === 'failed') {
+      setErr('Sign-in did not complete. Please try again.')
+    }
     const c = getClient()
     if (c) c.auth.getSession().then(({ data }) => setSignedIn(!!data.session)).catch(() => {})
-    const back = () => setBusy(false) // returning with the back button
+    const back = () => setBusy(false)
     window.addEventListener('pageshow', back)
     return () => window.removeEventListener('pageshow', back)
   }, [])
-  useEffect(() => { if (!err) return; const t = setTimeout(() => setErr(''), 6000); return () => clearTimeout(t) }, [err])
+
+  useEffect(() => {
+    if (!err) return
+    const t = setTimeout(() => setErr(''), 6000)
+    return () => clearTimeout(t)
+  }, [err])
 
   async function start() {
-    if (signedIn) { window.location.href = '/jee/dashboard'; return }
+    if (signedIn) {
+      window.location.href = '/jee/store'
+      return
+    }
     const c = getClient()
-    if (!c) { setErr('Sign-in is unavailable right now. Please try again in a moment.'); return }
-    setBusy(true); setErr('')
-    const { error } = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/jee/auth/callback` } })
-    if (error) { setBusy(false); setErr('Could not start Google sign-in. Please try again.') }
+    if (!c) {
+      setErr('Sign-in is unavailable right now. Please try again in a moment.')
+      return
+    }
+    setBusy(true)
+    setErr('')
+    const { error } = await c.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/jee/auth/callback` },
+    })
+    if (error) {
+      setBusy(false)
+      setErr('Could not start Google sign-in. Please try again.')
+    }
   }
-  const label = busy ? 'Opening Google\u2026' : signedIn ? 'Open my dashboard' : 'Get started'
+
+  const label = busy ? 'Opening Google…' : signedIn ? 'Explore Store ➔' : 'Get Started with Google'
   const gbtn = (cls = '', text = label) => (
-    <button type="button" className={`jx-cta ${cls}`} onClick={start} disabled={busy}>{text}</button>
+    <button type="button" className={`jx-cta ${cls}`} onClick={start} disabled={busy}>
+      {text}
+    </button>
   )
+
+  const selectedPyqYearData = PYQ_YEAR_DATA.find((y) => y.year === previewYear) ?? PYQ_YEAR_DATA[0]
 
   return (
     <div className="jx" ref={root} data-theme={theme}>
       <header className="jx-nav">
         <a href="#home" className="jx-brand">MatchMyInterview <span>· JEE</span></a>
-        <nav className="jx-links" aria-label="Sections">{NAV.map(([l, h]) => <a key={h} href={h}>{l}</a>)}</nav>
+        <nav className="jx-links" aria-label="Sections">
+          {NAV.map(([l, h]) => (
+            <a key={h} href={h}>{l}</a>
+          ))}
+        </nav>
         <div className="jx-navr">
-          <button type="button" className="jx-theme" onClick={flip} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>{theme === 'dark' ? '\u2600' : '\u263E'}</button>
-          {gbtn('sm', busy ? 'Opening\u2026' : signedIn ? 'Dashboard' : 'Get started')}
+          <button
+            type="button"
+            className="jx-theme"
+            onClick={flip}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? '☀' : '☾'}
+          </button>
+          {gbtn('sm', busy ? 'Opening…' : signedIn ? 'Store' : 'Get started')}
         </div>
       </header>
 
+      {/* Hero Section */}
       <section className="jx-hero" id="home">
         <i className="jx-blob b1" /><i className="jx-blob b2" />
         <div className="jx-wrap jx-herogrid">
           <div>
-            <span className="jx-pill">JEE Main mock tests · from {'\u20b9'}{PRICE.mock}</span>
-            <h1>The mock test that feels like the <em>real JEE.</em></h1>
-            <p className="jx-lead">Take full-length JEE-style mocks, then see your marks, rank, percentile and a complete analysis of where you gained and lost marks.</p>
-            <div className="jx-hero-cta">{gbtn()}<a href="#how" className="jx-ghost">See how it works</a></div>
-            <div className="jx-chips"><span>Mock test {'\u20b9'}{PRICE.mock}</span><span>Full analysis {'\u20b9'}{PRICE.analysis}</span><span>No subscription</span></div>
-            <p className="jx-small">Try the exam screen on the right. It is a sample, not a real paper.</p>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #2563EB, #7C3AED)',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  padding: '4px 12px',
+                  borderRadius: 99,
+                  letterSpacing: '0.04em',
+                }}
+              >
+                ★ CURATED BY NITIANS
+              </span>
+              <span style={{ fontSize: 13, color: '#93C5FD', fontWeight: 600 }}>
+                From ₹11 · Pay per mock
+              </span>
+            </div>
+
+            <h1 style={{ fontSize: 'clamp(32px, 4.5vw, 54px)', lineHeight: 1.12, letterSpacing: '-0.03em' }}>
+              Questions Chosen by NITians for Upcoming <em>NITians &amp; IITians.</em>
+            </h1>
+
+            <p className="jx-lead" style={{ marginTop: 16 }}>
+              Formula traps, accurate NTA shift calibrations, 3-level progressive full mocks, and 50+ free official PYQs.
+              Built by Rohit Poddar (NIT Rourkela) to deliver genuine exam-grade simulation for every student.
+            </p>
+
+            <div className="jx-hero-cta">
+              {gbtn()}
+              <a href="#catalog" className="jx-ghost">Browse Mocks Catalog</a>
+            </div>
+
+            <div className="jx-chips">
+              <span>NITian 3-Level Mocks</span>
+              <span>Topic Trees ₹11</span>
+              <span>Free PYQs (2020–2026)</span>
+              <span>Instant AI Analysis</span>
+            </div>
+            <p className="jx-small">Try the live interactive exam screen on the right. Autosave &amp; palette included.</p>
           </div>
+
           <div id="demo"><ExamDemo /></div>
         </div>
       </section>
 
-      <div className="jx-ticker" aria-hidden="true"><div>{[...TICKER, ...TICKER, ...TICKER].map((t, i) => <span key={i}>{t}</span>)}</div></div>
+      {/* Ticker */}
+      <div className="jx-ticker" aria-hidden="true">
+        <div>{[...TICKER, ...TICKER, ...TICKER].map((t, i) => <span key={i}>{t}</span>)}</div>
+      </div>
 
-      <section className="jx-sec" id="features"><div className="jx-wrap">
-        <h2 className="jx-rv">What a coaching test series gives you, priced per mock</h2>
-        <p className="jx-sub jx-rv">Exam-style practice, a detailed report and a plan to improve it. You pay for the mocks you take and nothing else.</p>
-        <div className="jx-feats">{FEATURES.map(([t, d], i) => <div className="jx-feat jx-rv" style={{ transitionDelay: `${(i % 3) * 80}ms` }} key={t}><b>{t}</b><p>{d}</p></div>)}</div>
-      </div></section>
+      {/* ==================== NEW SECTION: INTERACTIVE MOCKS CATALOG ==================== */}
+      <section className="jx-sec" id="catalog" style={{ background: 'var(--bg2)', padding: '80px 0' }}>
+        <div className="jx-wrap">
+          <div style={{ textAlign: 'center', maxWidth: 760, margin: '0 auto 36px' }}>
+            <span
+              style={{
+                display: 'inline-block',
+                background: 'rgba(37,99,235,0.12)',
+                color: '#2563EB',
+                fontSize: 13,
+                fontWeight: 800,
+                padding: '4px 14px',
+                borderRadius: 99,
+                letterSpacing: '0.04em',
+                marginBottom: 10,
+              }}
+            >
+              COMPLETE TEST SERIES CATALOG
+            </span>
+            <h2 className="jx-rv" style={{ fontSize: 'clamp(28px, 4vw, 42px)', margin: '0 0 12px', letterSpacing: '-0.02em' }}>
+              Explore NITian Curated Mocks &amp; Free PYQs
+            </h2>
+            <p className="jx-sub jx-rv" style={{ margin: '0 auto' }}>
+              Switch between our premium NITian-curated question sets and 100% free past NTA shift papers.
+              Select any test to begin immediately.
+            </p>
+          </div>
 
-      <section className="jx-sec alt"><div className="jx-wrap">
-        <h2 className="jx-rv">Four ways to practise</h2>
-        <p className="jx-sub jx-rv">Use the format that fits where you are in your preparation.</p>
-        <div className="jx-four">{FOUR.map(([t, d], i) => <div className="jx-card jx-rv" style={{ transitionDelay: `${i * 80}ms` }} key={t}><b>{t}</b><p>{d}</p></div>)}</div>
-      </div></section>
+          {/* Slide Switch / Toggle */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 36 }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                background: 'var(--card)',
+                border: '1px solid var(--line)',
+                padding: 6,
+                borderRadius: 99,
+                gap: 8,
+                boxShadow: '0 8px 24px var(--shadow)',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setPreviewTab('premium')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 24px',
+                  borderRadius: 99,
+                  border: 0,
+                  font: '700 15px inherit',
+                  cursor: 'pointer',
+                  background: previewTab === 'premium' ? 'linear-gradient(135deg, #2563EB, #7C3AED)' : 'transparent',
+                  color: previewTab === 'premium' ? '#fff' : 'var(--mut)',
+                  boxShadow: previewTab === 'premium' ? '0 6px 18px rgba(37,99,235,0.35)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <span>⭐</span>
+                <span>Premium Mocks</span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    background: previewTab === 'premium' ? 'rgba(255,255,255,0.22)' : 'var(--soft)',
+                    padding: '2px 8px',
+                    borderRadius: 99,
+                  }}
+                >
+                  From ₹11
+                </span>
+              </button>
 
-      <section className="jx-sec" id="how"><div className="jx-wrap">
-        <h2 className="jx-rv">How it works</h2>
-        <div className="jx-how jx-rv">
-          <ol>{STEPS.map(([t], i) => <li key={t}><button type="button" className={i === step ? 'on' : ''} onClick={() => setStep(i)}><b>{i + 1}</b>{t}</button></li>)}</ol>
-          <div className="jx-how-panel" key={step}><span>Step {step + 1} of {STEPS.length}</span><h3>{STEPS[step][0]}</h3><p>{STEPS[step][1]}</p><i className="jx-prog" /></div>
-        </div>
-      </div></section>
+              <button
+                type="button"
+                onClick={() => setPreviewTab('free')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 24px',
+                  borderRadius: 99,
+                  border: 0,
+                  font: '700 15px inherit',
+                  cursor: 'pointer',
+                  background: previewTab === 'free' ? 'linear-gradient(135deg, #10B981, #059669)' : 'transparent',
+                  color: previewTab === 'free' ? '#fff' : 'var(--mut)',
+                  boxShadow: previewTab === 'free' ? '0 6px 18px rgba(16,185,129,0.35)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <span>🎁</span>
+                <span>Free PYQs (2020–2026)</span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    background: previewTab === 'free' ? 'rgba(255,255,255,0.22)' : 'var(--soft)',
+                    padding: '2px 8px',
+                    borderRadius: 99,
+                  }}
+                >
+                  50+ Shifts
+                </span>
+              </button>
+            </div>
+          </div>
 
-      <section className="jx-sec alt" id="pricing"><div className="jx-wrap">
-        <h2 className="jx-rv">Simple pricing</h2>
-        <p className="jx-sub jx-rv">Per mock. No subscription, no season pass, no hidden charges.</p>
-        <div className="jx-plans">{PLANS.map((p, i) => (
-          <div className={`jx-plan jx-rv${p.hi ? ' hi' : ''}`} style={{ transitionDelay: `${i * 90}ms` }} key={p.n}>
-            {p.hi && <em>Most popular</em>}
-            <h3>{p.n}</h3><div className="jx-amt">{'\u20b9'}{p.p}<small> per mock</small></div>
-            <ul>{p.pts.map((x) => <li key={x}>{x}</li>)}</ul>
-            {gbtn(p.hi ? 'wide' : 'wide alt')}
-          </div>))}</div>
-        <div className="jx-cmp jx-rv"><table>
-          <thead><tr><th>What is included</th><th>{'\u20b9'}{PRICE.mock}</th><th>{'\u20b9'}{PRICE.analysis}</th></tr></thead>
-          <tbody>{CMP.map(([n, a, b]) => <tr key={n}><td>{n}</td><td className={a ? 'jx-yes' : 'jx-no'}>{a ? '\u2713' : '\u2014'}</td><td className={b ? 'jx-yes' : 'jx-no'}>{b ? '\u2713' : '\u2014'}</td></tr>)}</tbody>
-        </table></div>
-      </div></section>
+          {/* TAB 1: PREMIUM PREVIEW */}
+          {previewTab === 'premium' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
+              {/* NITian 3-Level Full Mocks */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+                  <div>
+                    <h3 style={{ fontSize: 20, margin: '0 0 4px', fontWeight: 800 }}>
+                      1. NITian Curated Full Syllabus Mock Tests (3 Levels)
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 14, color: 'var(--mut)' }}>
+                      Questions hand-selected by NITian mentors matching real difficulty progression.
+                    </p>
+                  </div>
+                </div>
 
-      <section className="jx-sec" id="report"><div className="jx-wrap">
-        <h2 className="jx-rv">A report that shows exactly what to fix</h2>
-        <p className="jx-sub jx-rv">Sample report with made-up numbers, to show the layout.</p>
-        <div className="jx-report jx-rv"><span className="jx-badge">Sample data for illustration</span>
-          <div className="jx-rcols">
-            <div><h3>Accuracy by subject</h3>{[['Physics', 64], ['Chemistry', 78], ['Mathematics', 70]].map(([n, v]) => <div className="jx-bar" key={n}><span>{n}</span><div><i style={{ ['--w' as string]: `${v}%` }} /></div><b>{v}%</b></div>)}</div>
-            <div><h3>Time per question</h3><div className="jx-times">{[30, 55, 20, 80, 45, 95, 35, 60, 25, 70, 50, 90, 40, 65, 30, 85, 55, 45, 75, 35].map((h, i) => <i key={i} className={i % 5 === 3 ? 'bad' : i % 7 === 2 ? 'skip' : 'ok'} style={{ ['--h' as string]: `${h}%` }} />)}</div><p className="jx-small">Green correct · red wrong · grey skipped</p></div>
-            <div><h3>Slow but wrong</h3><ul className="jx-list"><li>Q23 · Rotational motion · 4m 10s</li><li>Q41 · Equilibrium · 3m 35s</li><li>Q58 · Definite integrals · 3m 20s</li></ul></div>
-            <div><h3>Your practice plan</h3><ul className="jx-list"><li>Revise rotational motion basics, 20 questions</li><li>Timed set on equilibrium, 15 minutes</li><li>Re-attempt the three questions above</li></ul></div>
-          </div></div>
-      </div></section>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: 18 }}>
+                  {NITIAN_FULL_MOCKS.map((m) => (
+                    <div
+                      key={m.id}
+                      style={{
+                        background: 'var(--card)',
+                        border: '1px solid var(--line)',
+                        borderRadius: 20,
+                        padding: 22,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 800,
+                              background: 'rgba(37,99,235,0.1)',
+                              color: '#2563EB',
+                              padding: '3px 10px',
+                              borderRadius: 99,
+                            }}
+                          >
+                            {m.badge}
+                          </span>
+                          <span style={{ fontSize: 13, color: 'var(--mut)', fontWeight: 600 }}>
+                            75 Qs · 180 min
+                          </span>
+                        </div>
+                        <h4 style={{ fontSize: 17, margin: '0 0 8px', fontWeight: 700 }}>{m.title}</h4>
+                        <p style={{ fontSize: 13, color: 'var(--mut)', margin: '0 0 16px', lineHeight: 1.5 }}>
+                          {m.description}
+                        </p>
+                      </div>
 
-      <section className="jx-sec alt" id="leaderboard"><div className="jx-wrap">
-        <h2 className="jx-rv">Know exactly where you rank</h2>
-        <p className="jx-sub jx-rv">Marks, rank and percentile for every mock, updated as students submit. Ranks are among students on this platform. Sample table below.</p>
-        <div className="jx-lb jx-rv"><span className="jx-badge">Sample data for illustration</span>
-          <table><thead><tr><th>Rank</th><th>Student</th><th>Marks</th><th>Percentile</th></tr></thead>
-            <tbody>{LB.map(([r, n, m, pc]) => <tr key={r} className={n === 'You' ? 'me' : ''}><td>#{r}</td><td>{n}</td><td>{m}/300</td><td>{pc}</td></tr>)}</tbody></table>
-        </div>
-      </div></section>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+                        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--ink)' }}>{rupees(m.pricePaise)}</div>
+                        <button type="button" className="jx-cta sm" onClick={start} disabled={busy}>
+                          {signedIn ? 'Take Mock ➔' : 'Get Started ➔'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-      <section className="jx-sec" id="resources"><div className="jx-wrap">
-        <h2 className="jx-rv">Study resources, on the way</h2>
-        <p className="jx-sub jx-rv">Notes, formula sheets and previous-year questions are being added next to the mocks. They are planned to be free for every signed-in student.</p>
-        <div className="jx-res">{RESOURCES.map(([t, d], i) => <div className="jx-card jx-rv" style={{ transitionDelay: `${(i % 3) * 80}ms` }} key={t}><b>{t}</b><p>{d}</p><span className="jx-tag">Coming soon</span></div>)}</div>
-      </div></section>
+              {/* Class-Wise Special Mocks */}
+              <div>
+                <h3 style={{ fontSize: 20, margin: '0 0 4px', fontWeight: 800 }}>
+                  2. Class-Wise Special Mock Tests
+                </h3>
+                <p style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--mut)' }}>
+                  Tailored mocks for Class 11 foundational mastery, Class 12 board balance, and repeaters.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: 18 }}>
+                  {CLASS_WISE_MOCKS.map((m) => (
+                    <div
+                      key={m.id}
+                      style={{
+                        background: 'var(--card)',
+                        border: '1px solid var(--line)',
+                        borderRadius: 20,
+                        padding: 22,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            background: 'rgba(124,58,237,0.1)',
+                            color: '#7C3AED',
+                            padding: '3px 10px',
+                            borderRadius: 99,
+                            display: 'inline-block',
+                            marginBottom: 10,
+                          }}
+                        >
+                          {m.badge}
+                        </span>
+                        <h4 style={{ fontSize: 17, margin: '0 0 8px', fontWeight: 700 }}>{m.title}</h4>
+                        <p style={{ fontSize: 13, color: 'var(--mut)', margin: '0 0 16px', lineHeight: 1.5 }}>
+                          {m.description}
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+                        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--ink)' }}>{rupees(m.pricePaise)}</div>
+                        <button type="button" className="jx-cta sm" onClick={start} disabled={busy}>
+                          {signedIn ? 'Take Mock ➔' : 'Get Started ➔'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-      {TESTIMONIALS.length > 0 && (
-        <section className="jx-sec alt" id="voices"><div className="jx-wrap">
-          <h2 className="jx-rv">What students and mentors say</h2>
-          <div className="jx-voices">{TESTIMONIALS.map((v) => <figure className="jx-voice jx-rv" style={{ margin: 0 }} key={v.name}><p>{v.quote}</p><b>{v.name}</b><span>{v.role}</span></figure>)}</div>
-        </div></section>
-      )}
+              {/* Subject-Wise & Topic-Wise Trees */}
+              <div>
+                <h3 style={{ fontSize: 20, margin: '0 0 4px', fontWeight: 800 }}>
+                  3. Subject &amp; Topic-Wise Tree Mocks (Layered Structure)
+                </h3>
+                <p style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--mut)' }}>
+                  Click to explore individual topics under Physics, Chemistry, and Mathematics.
+                </p>
 
-      <section className="jx-sec alt" id="founder"><div className="jx-wrap jx-narrow">
-        <h2 className="jx-rv">The person behind it</h2>
-        <div className="jx-founder jx-rv">
-          {photoOk
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img className="jx-ph" src={FOUNDER.photo} alt={FOUNDER.name} width={168} height={168} onError={() => setPhotoOk(false)} />
-            : <div className="jx-ph" aria-hidden="true">{FOUNDER.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}</div>}
-          <div>
-            <h3>{FOUNDER.name}</h3>
-            <p className="jx-role">{FOUNDER.role}</p>
-            <p><b style={{ color: 'var(--ink)' }}>{FOUNDER.school}</b></p>
-            <p>{FOUNDER.bio}</p>
-            {FOUNDER.links.length > 0 && <div className="jx-soc">{FOUNDER.links.map((l) => <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer">{l.label}{l.stat ? ` · ${l.stat}` : ''}</a>)}</div>}
+                {/* Subject Selector */}
+                <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                  {(['Physics', 'Chemistry', 'Mathematics'] as const).map((sub) => {
+                    const active = previewSubject === sub
+                    return (
+                      <button
+                        key={sub}
+                        type="button"
+                        onClick={() => setPreviewSubject(sub)}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: 12,
+                          border: '1px solid',
+                          borderColor: active ? '#2563EB' : 'var(--line)',
+                          background: active ? '#2563EB' : 'var(--card)',
+                          color: active ? '#fff' : 'var(--ink)',
+                          font: '700 13px inherit',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {sub} ({TOPIC_TREE[sub].length} Topics)
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div
+                  style={{
+                    background: 'var(--card)',
+                    border: '1px solid var(--line)',
+                    borderRadius: 18,
+                    padding: 18,
+                    display: 'grid',
+                    gap: 10,
+                  }}
+                >
+                  {TOPIC_TREE[previewSubject].slice(0, 4).map((topic, i) => (
+                    <div
+                      key={topic.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '12px 16px',
+                        background: 'var(--bg2)',
+                        borderRadius: 12,
+                        gap: 12,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div>
+                        <b style={{ fontSize: 14 }}>{topic.title}</b>
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--mut)' }}>
+                          {topic.questionCount} Questions · 45 Min · {topic.description}
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 15, fontWeight: 800 }}>{rupees(topic.pricePaise)}</span>
+                        <button type="button" className="jx-cta sm" onClick={start} disabled={busy}>
+                          Attempt ➔
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ textAlign: 'center', paddingTop: 8 }}>
+                    <button type="button" className="jx-ghost" onClick={start} style={{ color: 'var(--link)', borderColor: 'var(--line)' }}>
+                      View all {TOPIC_TREE[previewSubject].length} {previewSubject} topics in Store ➔
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: FREE PYQs PREVIEW */}
+          {previewTab === 'free' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {PYQ_YEAR_DATA.map((yg) => {
+                  const active = previewYear === yg.year
+                  return (
+                    <button
+                      key={yg.year}
+                      type="button"
+                      onClick={() => setPreviewYear(yg.year)}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: 12,
+                        border: '1px solid',
+                        borderColor: active ? '#10B981' : 'var(--line)',
+                        background: active ? '#10B981' : 'var(--card)',
+                        color: active ? '#fff' : 'var(--ink)',
+                        font: '700 14px inherit',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {yg.year} ({yg.totalPapers} Papers)
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div
+                style={{
+                  background: 'var(--card)',
+                  border: '1px solid var(--line)',
+                  borderRadius: 20,
+                  padding: 24,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: 16,
+                }}
+              >
+                {selectedPyqYearData.dates.flatMap((d) => d.shifts).map((sh) => (
+                  <div
+                    key={sh.testId}
+                    style={{
+                      border: '1px solid var(--line)',
+                      borderRadius: 14,
+                      padding: 16,
+                      background: 'var(--bg2)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            background: '#DCFCE7',
+                            color: '#166534',
+                            padding: '2px 8px',
+                            borderRadius: 99,
+                          }}
+                        >
+                          100% FREE
+                        </span>
+                        <span style={{ fontSize: 12, color: 'var(--mut)' }}>{sh.timeSlot}</span>
+                      </div>
+                      <b style={{ fontSize: 15, display: 'block' }}>{sh.title}</b>
+                      <span style={{ fontSize: 12, color: 'var(--mut)', marginTop: 4, display: 'block' }}>
+                        75 Qs · 300 Marks · 180 Min
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="jx-cta sm"
+                      onClick={start}
+                      disabled={busy}
+                      style={{ background: '#10B981', borderColor: '#10B981', width: '100%' }}
+                    >
+                      Start Free Test ➔
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Store Link */}
+          <div style={{ textAlign: 'center', marginTop: 36 }}>
+            {gbtn('wide', signedIn ? 'Open Full Store & Dashboard ➔' : 'Get Started with Google to Take Any Mock ➔')}
           </div>
         </div>
-      </div></section>
+      </section>
 
-      <section className="jx-sec" id="faq"><div className="jx-wrap jx-narrow">
-        <h2 className="jx-rv">Frequently asked questions</h2>
-        {FAQ.map(([q, a]) => <details className="jx-faq jx-rv" key={q}><summary>{q}</summary><p>{a}</p></details>)}
-      </div></section>
-
-      <section className="jx-sec join"><div className="jx-wrap jx-narrow jx-rv">
-        <span className="jx-pill jx-join-pill">Built by an NIT Rourkela graduate</span>
-        <h2>Your IIT or NIT seat starts with the next mock</h2>
-        <p className="jx-sub">Real-exam practice, a full report after every attempt and a plan for what to fix next. One tap with Google and you are in.</p>
-        {gbtn()}
-        <p className="jx-small">Pay per mock · No subscription · No password</p>
-        <p className="jx-small">By continuing you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.</p>
-      </div></section>
-
-      <footer className="jx-foot"><div className="jx-wrap">
-        <div className="jx-fgrid">
-          <div>
-            <p className="jx-fb">MatchMyInterview · JEE</p>
-            <p>JEE Main mock tests with a full report after every attempt: marks, rank, percentile, time analysis and a practice plan.</p>
+      {/* Features Section */}
+      <section className="jx-sec" id="features">
+        <div className="jx-wrap">
+          <h2 className="jx-rv">What a Coaching Test Series Gives You, Priced Per Mock</h2>
+          <p className="jx-sub jx-rv">
+            Exam-style practice, a detailed report, and a plan to improve it. You pay for the mocks you take and nothing else.
+          </p>
+          <div className="jx-feats">
+            {FEATURES.map(([t, d], i) => (
+              <div className="jx-feat jx-rv" style={{ transitionDelay: `${(i % 3) * 80}ms` }} key={t}>
+                <b>{t}</b>
+                <p>{d}</p>
+              </div>
+            ))}
           </div>
-          <div><h4>Platform</h4><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#demo">Try the demo</a><a href="#resources">Resources</a></div>
-          <div><h4>Legal</h4><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="/contact">Contact</a></div>
-          <div><h4>More</h4><a href="/">MatchMyInterview</a><a href="#founder">About the founder</a><a href="#faq">FAQ</a></div>
         </div>
-        <div className="jx-fbot">
-          <p>JEE and NTA are names of an exam and an organisation unrelated to us. This is an independent practice platform, not affiliated with or endorsed by the NTA.</p>
-          <p>{'\u00a9'} {new Date().getFullYear()} MatchMyInterview. Made for JEE aspirants.</p>
+      </section>
+
+      {/* How It Works */}
+      <section className="jx-sec alt" id="how">
+        <div className="jx-wrap">
+          <h2 className="jx-rv">How It Works</h2>
+          <div className="jx-how jx-rv">
+            <ol>
+              {STEPS.map(([t], i) => (
+                <li key={t}>
+                  <button type="button" className={i === step ? 'on' : ''} onClick={() => setStep(i)}>
+                    <b>{i + 1}</b>{t}
+                  </button>
+                </li>
+              ))}
+            </ol>
+            <div className="jx-how-panel" key={step}>
+              <span>Step {step + 1} of {STEPS.length}</span>
+              <h3>{STEPS[step][0]}</h3>
+              <p>{STEPS[step][1]}</p>
+              <i className="jx-prog" />
+            </div>
+          </div>
         </div>
-      </div></footer>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="jx-sec" id="pricing">
+        <div className="jx-wrap">
+          <h2 className="jx-rv">Simple, Transparent Pricing</h2>
+          <p className="jx-sub jx-rv">Per mock. No subscriptions, no lock-in, no hidden renewal charges.</p>
+          <div className="jx-plans">
+            <div className="jx-plan jx-rv">
+              <h3>Single Mock Test</h3>
+              <div className="jx-amt">₹11<small> per mock</small></div>
+              <ul>
+                <li>Full-length 75-question JEE-style mock</li>
+                <li>Server-timed attempt with live autosave</li>
+                <li>Marks, rank, accuracy &amp; percentile</li>
+                <li>Leaderboard access &amp; instant results</li>
+              </ul>
+              {gbtn('wide alt', 'Take a Mock for ₹11')}
+            </div>
+
+            <div className="jx-plan jx-rv hi">
+              <em>Recommended</em>
+              <h3>Mock + AI Analysis</h3>
+              <div className="jx-amt">₹49<small> per mock</small></div>
+              <ul>
+                <li>Everything in the Single Mock tier</li>
+                <li>Every mistake mapped by chapter and topic</li>
+                <li>Time spent on each question analysis</li>
+                <li>Slow-but-wrong trap list &amp; practice plan</li>
+              </ul>
+              {gbtn('wide', 'Get Mock + Full Analysis')}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Founder Section: Rohit Poddar, NIT Rourkela */}
+      <section className="jx-sec alt">
+        <div className="jx-wrap">
+          <div className="jx-founder jx-rv">
+            {photoOk ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={FOUNDER.photo}
+                alt={FOUNDER.name}
+                width={168}
+                height={168}
+                className="jx-ph"
+                onError={() => setPhotoOk(false)}
+              />
+            ) : (
+              <div className="jx-ph" aria-hidden="true">RP</div>
+            )}
+            <div>
+              <h3>{FOUNDER.name}</h3>
+              <div className="jx-role">{FOUNDER.school} · {FOUNDER.role}</div>
+              <p>{FOUNDER.bio}</p>
+              <div className="jx-soc">
+                {FOUNDER.links.map((l) => (
+                  <a key={l.label} href={l.href} target="_blank" rel="noreferrer">
+                    {l.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="jx-sec" id="faq">
+        <div className="jx-wrap">
+          <h2 className="jx-rv">Frequently Asked Questions</h2>
+          <div className="jx-faqs" style={{ marginTop: 24 }}>
+            {[
+              ['Why are questions prepared by an NITian important?', 'Most test series either repeat obsolete questions or make questions unnaturally complex. Our mocks are formulated by NIT Rourkela alumni who scored in the top percentiles, ensuring real NTA pattern alignment, realistic formula traps, and balanced difficulty.'],
+              ['How does "Buy Again" / retake work?', 'Once you finish a mock, you get your score and analysis. If you want to test your improvement after revising your mistakes, you can click "Buy Again" to sit a fresh attempt without losing your previous score history.'],
+              ['Are previous-year papers (PYQs) really free?', 'Yes! All JEE Main official shift papers from 2020 through 2026 are 100% free with the full NTA timed interface.'],
+              ['Is there a subscription?', 'No. You pay ₹11 per mock, or ₹49 with detailed mistake breakdown. Nothing ever auto-renews.'],
+            ].map(([q, a]) => (
+              <details key={q} className="jx-faq">
+                <summary>{q}</summary>
+                <p>{a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Final Centered CTA */}
+      <section className="jx-sec join">
+        <div className="jx-wrap">
+          <span className="jx-pill jx-join-pill">READY TO TEST YOUR LEVEL?</span>
+          <h2>Join Upcoming NITians &amp; IITians Practicing Today</h2>
+          <p className="jx-sub">Sign in with Google in 5 seconds. Take your first mock from ₹11.</p>
+          {gbtn('wide', signedIn ? 'Go to Store & Dashboard ➔' : 'Get Started with Google')}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="jx-foot">
+        <div className="jx-wrap">
+          <div className="jx-fgrid">
+            <div>
+              <div className="jx-fb">MatchMyInterview JEE</div>
+              <p>Authentic JEE Main mock test platform curated by NITians.</p>
+            </div>
+            <div>
+              <h4>Tests</h4>
+              <a href="#catalog">Full Syllabus Mocks</a>
+              <a href="#catalog">Class 11 &amp; 12 Special</a>
+              <a href="#catalog">Topic Trees</a>
+              <a href="#catalog">Free PYQs (2020-2026)</a>
+            </div>
+            <div>
+              <h4>Account</h4>
+              <a href="/jee/dashboard">My Dashboard</a>
+              <a href="/jee/store">Mock Store</a>
+              <a href="/jee/admin/papers">Admin Builder</a>
+            </div>
+            <div>
+              <h4>Founder</h4>
+              <p>Rohit Poddar</p>
+              <p>NIT Rourkela</p>
+            </div>
+          </div>
+          <div className="jx-fbot">
+            <p>© {new Date().getFullYear()} MatchMyInterview. Built for upcoming NITians &amp; IITians.</p>
+          </div>
+        </div>
+      </footer>
 
       {err && <div className="jx-toast" role="alert">{err}</div>}
     </div>
