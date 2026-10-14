@@ -60,7 +60,7 @@ export async function getAttemptById(db: SupabaseClient, attemptId: string): Pro
   return (data as AttemptRow | null) ?? null
 }
 
-/** Questions for display. Deliberately never selects anything from jee_answer_keys. */
+/** Questions for display during the exam. Deliberately never selects anything from jee_answer_keys. */
 export async function loadQuestions(db: SupabaseClient, testId: string): Promise<ExamQuestion[]> {
   const { data, error } = await db
     .from('jee_questions')
@@ -69,6 +69,48 @@ export async function loadQuestions(db: SupabaseClient, testId: string): Promise
     .order('position')
   if (error) throw new Error(error.message)
   return ((data ?? []) as ExamQuestion[]).map((q) => ({ ...q, options: Array.isArray(q.options) ? (q.options as string[]) : null }))
+}
+
+export type ExamQuestionWithSolution = ExamQuestion & {
+  topic?: string | null
+  answer?: string
+  solution?: string | null
+  tolerance?: number | null
+}
+
+/** Questions with official answer keys and step-by-step solutions for the post-exam Analysis review. */
+export async function loadQuestionsWithSolutions(db: SupabaseClient, testId: string): Promise<ExamQuestionWithSolution[]> {
+  const { data: questions, error } = await db
+    .from('jee_questions')
+    .select('id,position,subject,chapter,topic,qtype,body,options,marks,negative,image_url')
+    .eq('test_id', testId)
+    .order('position')
+  if (error) throw new Error(error.message)
+
+  const qList = (questions ?? []) as (ExamQuestion & { topic?: string | null })[]
+  const ids = qList.map((q) => q.id)
+  const keyMap = new Map<string, { correct: string; solution: string | null; tolerance: number | null }>()
+
+  if (ids.length > 0) {
+    const { data: keys } = await db
+      .from('jee_answer_keys')
+      .select('question_id,correct,solution,tolerance')
+      .in('question_id', ids)
+    for (const k of (keys ?? []) as { question_id: string; correct: string; solution: string | null; tolerance: number | null }[]) {
+      keyMap.set(k.question_id, k)
+    }
+  }
+
+  return qList.map((q) => {
+    const k = keyMap.get(q.id)
+    return {
+      ...q,
+      options: Array.isArray(q.options) ? (q.options as string[]) : null,
+      answer: k?.correct ?? '',
+      solution: k?.solution ?? null,
+      tolerance: k?.tolerance ?? null,
+    }
+  })
 }
 
 export const deadlinePassed = (a: AttemptRow, graceMs = 0) => Date.now() > new Date(a.deadline_at).getTime() + graceMs
