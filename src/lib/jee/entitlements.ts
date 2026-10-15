@@ -30,7 +30,14 @@ export async function loadStates(userId: string): Promise<TestState[]> {
   const attempts = (a.data ?? []) as { test_id: string; status: string; started_at: string; attempt_number?: number }[]
   const results = (res.data ?? []) as { test_id: string; marks: number }[]
 
-  return ((t.data ?? []) as TestRow[]).map((test) => {
+  // Only tests that are live AND actually contain questions are shown, so nobody can buy an empty exam.
+  const liveRows = (t.data ?? []) as TestRow[]
+  const qRes = liveRows.length
+    ? await admin.from('jee_questions').select('test_id').in('test_id', liveRows.map((x) => x.id)).lte('position', 1)
+    : { data: [] as { test_id: string }[], error: null }
+  const hasQuestions = new Set(((qRes.data ?? []) as { test_id: string }[]).map((x) => x.test_id))
+
+  return liveRows.filter((x) => hasQuestions.has(x.id)).map((test) => {
     const isFree = Boolean(test.is_free)
     const hasAnalysis = isFree || paid.some((x) => x.test_id === test.id && x.tier === 'analysis')
     const hasMock = isFree || hasAnalysis || paid.some((x) => x.test_id === test.id && x.tier === 'mock')

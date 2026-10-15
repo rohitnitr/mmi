@@ -18,6 +18,11 @@ declare global {
   }
 }
 
+// ---- Store switches: edit these to open or close parts of the store ----
+// 'true' = students can buy and start tests in that section (a test also needs to be live and have questions).
+const SECTION_OPEN = { full: true, class: false, subject: false, topic: false } as const
+const SHOW_FREE_PYQ_TAB = false
+
 type Msg = { ok: boolean; text: string } | null
 
 function loadRazorpay(): Promise<boolean> {
@@ -96,6 +101,10 @@ export default function StoreClient({ states = [] }: { states: TestState[] }) {
     }
   }
 
+  // A catalog card is only sellable when a LIVE test with questions exists for it in the database.
+  const isLive = (item: { id: string; title: string }) =>
+    stateById.has(item.id) || stateById.has(item.title.toLowerCase().trim())
+
   async function buy(testId: string, tier: Tier, title?: string) {
     if (busy) return
     setBusy(testId + tier)
@@ -168,14 +177,36 @@ export default function StoreClient({ states = [] }: { states: TestState[] }) {
     setExpandedDates((prev) => ({ ...prev, [dateKey]: !prev[dateKey] }))
   }
 
+  const soonCard = (item: CatalogMockItem) => (
+    <div
+      key={item.id}
+      className="js-item locked"
+      style={{ borderRadius: 20, padding: 22, display: 'flex', flexDirection: 'column', opacity: 0.88 }}
+    >
+      <div style={{ marginBottom: 12 }}>
+        <span style={{ padding: '4px 10px', borderRadius: 99, fontSize: 12, fontWeight: 800, background: 'rgba(217,119,6,0.14)', color: '#B45309' }}>
+          {'\u23f3 Coming soon'}
+        </span>
+      </div>
+      <h3 style={{ fontSize: 18, margin: '0 0 8px', lineHeight: 1.35, fontWeight: 700 }}>{item.title}</h3>
+      <p style={{ fontSize: 13, color: 'var(--mut)', margin: '0 0 16px', lineHeight: 1.5 }}>{item.description}</p>
+      <div style={{ marginTop: 'auto' }}>
+        <button type="button" className="jx-cta js-full" disabled style={{ minHeight: 44, opacity: 0.6, cursor: 'not-allowed' }}>
+          Coming soon
+        </button>
+      </div>
+    </div>
+  )
+
   // Render a standard mock card with Buy Again / Retake / Start / Resume logic
-  const renderCard = (item: CatalogMockItem, badgeColor = '#2563EB') => {
+  const renderCard = (item: CatalogMockItem, badgeColor = '#2563EB', sectionOpen = true) => {
     const s = getState(item)
     const id = s.test.id
     const done = s.attempt === 'done'
     const inProgress = s.attempt === 'in_progress'
     const isFree = Boolean(s.test.is_free)
     const cost = s.test.price_paise ? s.test.price_paise : PRICE_PAISE.mock
+    if (!sectionOpen || !isLive(item)) return soonCard(item)
 
     return (
       <div
@@ -359,20 +390,21 @@ export default function StoreClient({ states = [] }: { states: TestState[] }) {
             ★ PREPARED BY NITIANS
           </span>
           <span style={{ fontSize: 13, color: '#2563EB', fontWeight: 700 }}>
-            Curated by Rohit Poddar (NIT Rourkela) &amp; Top 1% Mentors
+            Curated by Rohit Poddar (NIT Rourkela)
           </span>
         </div>
         <h2 style={{ fontSize: 'clamp(22px, 3vw, 30px)', margin: '0 0 8px', letterSpacing: '-0.02em' }}>
           Questions Chosen by NITians for Upcoming NITians &amp; IITians
         </h2>
         <p style={{ margin: 0, color: 'var(--mut)', fontSize: 15, maxWidth: 820, lineHeight: 1.55 }}>
-          Master the exact high-probability question patterns, deceptive traps, and time-saving techniques crafted
-          by students who cleared JEE Main with top ranks. Real NTA interface, server-timed rigor, and instant analytics.
+          Practise high-probability question patterns, common traps and time-saving techniques,
+          with a JEE-style exam interface, server-timed attempts and instant analytics.
         </p>
       </div>
 
       {/* Slide Switch / Toggle Switch: Premium vs Free */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
+      {SHOW_FREE_PYQ_TAB && (
+<div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
         <div
           style={{
             display: 'inline-flex',
@@ -449,6 +481,7 @@ export default function StoreClient({ states = [] }: { states: TestState[] }) {
           </button>
         </div>
       </div>
+)}
 
       {/* -------------------- TAB 1: PREMIUM -------------------- */}
       {tab === 'premium' && (
@@ -468,7 +501,7 @@ export default function StoreClient({ states = [] }: { states: TestState[] }) {
               build stamina for the real 300-mark JEE Main paper.
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
-              {NITIAN_FULL_MOCKS.map((m) => renderCard(m, '#2563EB'))}
+              {NITIAN_FULL_MOCKS.map((m) => renderCard(m, '#2563EB', SECTION_OPEN.full))}
             </div>
           </section>
 
@@ -485,7 +518,7 @@ export default function StoreClient({ states = [] }: { states: TestState[] }) {
               balance, or take the comprehensive repeater test.
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
-              {CLASS_WISE_MOCKS.map((m) => renderCard(m, '#7C3AED'))}
+              {CLASS_WISE_MOCKS.map((m) => renderCard(m, '#7C3AED', SECTION_OPEN.class))}
             </div>
           </section>
 
@@ -501,12 +534,13 @@ export default function StoreClient({ states = [] }: { states: TestState[] }) {
               Fix weak individual subjects with focused 60-minute sectional mocks (25 Questions · 100 Marks).
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
-              {SUBJECT_WISE_MOCKS.map((m) => renderCard(m, '#059669'))}
+              {SUBJECT_WISE_MOCKS.map((m) => renderCard(m, '#059669', SECTION_OPEN.subject))}
             </div>
           </section>
 
           {/* Section 4: Topic-Wise Mock Tests (Layered Tree Structure) */}
-          <section>
+          {SECTION_OPEN.topic ? (
+<section>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 800, color: '#D97706', letterSpacing: '0.06em' }}>
                 SECTION 04
@@ -692,6 +726,17 @@ export default function StoreClient({ states = [] }: { states: TestState[] }) {
               })}
             </div>
           </section>
+) : (
+<section>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#D97706', letterSpacing: '0.06em' }}>SECTION 04</span>
+                <h2 style={{ fontSize: 24, margin: 0, letterSpacing: '-0.02em' }}>Topic-Wise Mocks</h2>
+              </div>
+              <div style={{ border: '1px dashed var(--line)', borderRadius: 16, padding: 20, color: 'var(--mut)', fontSize: 14 }}>
+                {'\u23f3 Coming soon. Chapter-wise topic tests are being prepared.'}
+              </div>
+            </section>
+)}
         </div>
       )}
 
