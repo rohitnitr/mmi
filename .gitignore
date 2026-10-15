@@ -42,3 +42,4 @@ next-env.d.ts
 .env*.local
 .mmi-backup/
 install_*
+blog-drafts/
