@@ -21,6 +21,7 @@ interface BlogEditorProps {
   content: string
   onChange: (html: string) => void
   stickyTop?: string
+  flat?: boolean
 }
 
 function Btn({ onClick, active, title, disabled, children }: { onClick: () => void; active?: boolean; title: string; disabled?: boolean; children: React.ReactNode }) {
@@ -31,10 +32,18 @@ function Btn({ onClick, active, title, disabled, children }: { onClick: () => vo
     </button>
   )
 }
+function LBtn({ onClick, active, title, disabled, label, children }: { onClick: () => void; active?: boolean; title: string; disabled?: boolean; label: string; children: React.ReactNode }) {
+  return (
+    <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={onClick} title={title} aria-label={title} disabled={disabled}
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[13px] font-semibold transition-colors disabled:opacity-40 ${active ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'}`}>
+      {children}<span className="hidden md:inline">{label}</span>
+    </button>
+  )
+}
 const Sep = () => <div className="w-px h-5 bg-gray-300 mx-1" />
 const TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']
 
-export function BlogEditor({ content, onChange, stickyTop = 'top-14' }: BlogEditorProps) {
+export function BlogEditor({ content, onChange, stickyTop = 'top-14', flat = false }: BlogEditorProps) {
   const [panel, setPanel] = useState<'link' | 'video' | null>(null)
   const [url, setUrl] = useState('')
   const [pending, setPending] = useState<string | null>(null)
@@ -60,7 +69,7 @@ export function BlogEditor({ content, onChange, stickyTop = 'top-14' }: BlogEdit
     content,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
     editorProps: {
-      attributes: { class: 'min-h-[560px] outline-none px-6 sm:px-10 py-8 prose prose-lg max-w-none focus:outline-none prose-headings:font-extrabold prose-h2:border-b prose-h2:border-gray-100 prose-h2:pb-2 prose-a:text-blue-600 prose-img:rounded-xl prose-blockquote:border-blue-500 prose-pre:bg-[#0F172A]' },
+      attributes: { class: 'min-h-[560px] outline-none px-6 sm:px-12 py-8 prose prose-lg prose-p:leading-8 max-w-none focus:outline-none prose-headings:font-extrabold prose-h2:border-b prose-h2:border-gray-100 prose-h2:pb-2 prose-a:text-blue-600 prose-img:rounded-xl prose-blockquote:border-blue-500 prose-pre:bg-[#0F172A]' },
       handlePaste: (_v, e) => {
         const f = Array.from(e.clipboardData?.files ?? []).find((x) => x.type.startsWith('image/'))
         if (!f) return false
@@ -110,8 +119,8 @@ export function BlogEditor({ content, onChange, stickyTop = 'top-14' }: BlogEdit
   const words: number = editor.storage.characterCount?.words?.() ?? editor.getText().split(/\s+/).filter(Boolean).length
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-      <div className={`sticky ${stickyTop} z-20 bg-gray-50/95 backdrop-blur border-b border-gray-200 rounded-t-xl`}>
+    <div className={flat ? 'bg-white rounded-b-3xl' : 'bg-white rounded-xl border border-gray-200 shadow-sm'}>
+      <div className={`sticky ${stickyTop} z-20 bg-white/95 backdrop-blur border-y border-gray-100 ${flat ? '' : 'rounded-t-xl'}`}>
         <div className="flex flex-wrap items-center gap-0.5 p-2">
           <select value={block} onChange={(e) => setBlock(e.target.value)} aria-label="Block type" className="h-9 mr-1 px-2 text-sm font-medium rounded-md border border-gray-200 bg-white text-gray-800 cursor-pointer focus:outline-none focus:border-blue-400">
             <option value="p">Paragraph</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option><option value="h4">Heading 4</option>
@@ -132,11 +141,11 @@ export function BlogEditor({ content, onChange, stickyTop = 'top-14' }: BlogEdit
           <Btn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Quote"><Quote size={16} /></Btn>
           <Btn onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')} title="Code block"><Code size={16} /></Btn>
           <Sep />
-          <Btn onClick={() => open('link')} active={editor.isActive('link')} title="Insert link"><Link2 size={16} /></Btn>
+          <LBtn onClick={() => open('link')} active={editor.isActive('link')} title="Insert link" label="Link"><Link2 size={16} /></LBtn>
           <Btn onClick={() => editor.chain().focus().extendMarkRange('link').unsetLink().run()} disabled={!editor.isActive('link')} title="Remove link"><Unlink size={16} /></Btn>
-          <Btn onClick={() => fileRef.current?.click()} disabled={uploading} title="Insert image">{uploading ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}</Btn>
-          <Btn onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insert table"><TableIcon size={16} /></Btn>
-          <Btn onClick={() => open('video')} title="Embed YouTube video"><Video size={16} /></Btn>
+          <LBtn onClick={() => fileRef.current?.click()} disabled={uploading} title="Insert image" label="Image">{uploading ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}</LBtn>
+          <LBtn onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insert table" label="Table"><TableIcon size={16} /></LBtn>
+          <LBtn onClick={() => open('video')} title="Embed YouTube video" label="Video"><Video size={16} /></LBtn>
           <Btn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Divider"><Minus size={16} /></Btn>
           <Sep />
           <Btn onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Undo"><Undo size={16} /></Btn>
@@ -178,7 +187,7 @@ export function BlogEditor({ content, onChange, stickyTop = 'top-14' }: BlogEdit
 
       <EditorContent editor={editor} />
 
-      <div className="flex items-center justify-between px-6 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 rounded-b-xl">
+      <div className="flex items-center justify-between px-6 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 rounded-b-3xl">
         <span>{words.toLocaleString()} words</span>
         <span>~{Math.max(1, Math.ceil(words / 200))} min read</span>
       </div>
