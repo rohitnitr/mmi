@@ -1,0 +1,9 @@
+.tiptap table{border-collapse:collapse;width:100%;margin:1.5rem 0;table-layout:fixed}
+.tiptap th,.tiptap td{border:1px solid #CBD5E1;padding:8px 10px;vertical-align:top;min-width:60px;position:relative}
+.tiptap th{background:#F1F5F9;font-weight:700;text-align:left}
+.tiptap .selectedCell:after{content:'';position:absolute;inset:0;background:rgba(37,99,235,.12);pointer-events:none}
+.tiptap mark{background:#FEF08A;padding:0 2px;border-radius:3px}
+.tiptap div[data-youtube-video]{margin:1.5rem 0}
+.tiptap div[data-youtube-video] iframe{width:100%;aspect-ratio:16/9;height:auto;border-radius:12px;border:0}
+.tiptap img.ProseMirror-selectednode{outline:3px solid #2563EB;outline-offset:2px}
+.tiptap p.is-editor-empty:first-child::before{content:attr(data-placeholder);float:left;color:#94A3B8;height:0;pointer-events:none}
