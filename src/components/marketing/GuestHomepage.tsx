@@ -13,7 +13,6 @@ import SocialProofSection from './SocialProofSection'
 import FinalCTASection from './FinalCTASection'
 import MarketingFooter from './MarketingFooter'
 import type { CtaProps } from './shared'
-import HomeTalent from '@/components/HomeTalent'
 
 // users, onlineCount and coffeesShared are accepted for compatibility with page.tsx
 // but intentionally unused: the homepage no longer shows unverified stats.
@@ -35,7 +34,6 @@ export default function GuestHomepage({ onAuth }: Props) {
         <SkillValidationSection />
         <PortfolioPreviewSection />
         <SocialProofSection />
-        <HomeTalent />
         <FinalCTASection onAuth={onAuth} />
       </main>
       <MarketingFooter />
