@@ -5,14 +5,8 @@ import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
 import { motion, useScroll, useSpring } from 'framer-motion'
 import { Logo } from './Brand'
+import { NAV_LINKS } from '@/lib/site'
 import type { CtaProps } from './shared'
-
-const links = [
-  { href: '#how-it-works', label: 'How it works' },
-  { href: '#skills', label: 'Evidence' },
-  { href: '/talent', label: 'Talent' },
-  { href: '/blog', label: 'Blog' },
-]
 
 export default function MarketingNav({ onAuth }: CtaProps) {
   const [scrolled, setScrolled] = useState(false)
@@ -33,9 +27,10 @@ export default function MarketingNav({ onAuth }: CtaProps) {
         <nav aria-label="Main" className="mh-wrap mh-nav-in">
           <Logo />
           <div className="mh-links">
-            {links.map((l) => (
+            {NAV_LINKS.map((l) => (
               <Link key={l.href} href={l.href}>{l.label}</Link>
             ))}
+            <Link href="/search" className="mh-nav-search">Search</Link>
             <button className="mh-btn mh-btn-primary mh-btn-sm" onClick={onAuth}>Build My Portfolio</button>
           </div>
           <button
@@ -50,9 +45,12 @@ export default function MarketingNav({ onAuth }: CtaProps) {
         </nav>
         {open && (
           <div id="mh-mobile" className="mh-mobile">
-            {links.map((l) => (
+            {NAV_LINKS.map((l) => (
               <Link key={l.href} href={l.href} onClick={() => setOpen(false)}>{l.label}</Link>
             ))}
+            <Link href="/search" onClick={() => setOpen(false)}>Search</Link>
+            <Link href="/contact" onClick={() => setOpen(false)}>Contact</Link>
+            <Link href="/privacy" onClick={() => setOpen(false)}>Privacy Policy</Link>
             <button className="mh-btn mh-btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => { setOpen(false); onAuth() }}>
               Get started
             </button>

@@ -1,16 +1,17 @@
 import type { Metadata } from 'next'
+import LegalShell from '@/components/marketing/LegalShell'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service – MatchMyInterview',
+  title: 'Terms of Service',
   description: 'Terms of Service for MatchMyInterview: rules governing coffee credits, peer invites, and platform usage for mock interview practice.',
   keywords: 'MatchMyInterview terms of service, coffee credits, platform rules',
+  alternates: { canonical: '/terms' },
 }
 
 export default function TermsPage() {
   return (
-    <main style={{ maxWidth: 760, margin: '0 auto', padding: '48px 20px 80px', fontFamily: 'Inter,system-ui,sans-serif', color: '#18181b', lineHeight: 1.75 }}>
-      <a href="/" style={{ fontSize: 13, color: '#71717a', textDecoration: 'none' }}>← Back to MatchMyInterview</a>
-      <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: 24, marginBottom: 8 }}>Terms of Service</h1>
+    <LegalShell title="Terms of Service">
+      <h1>Terms of Service</h1>
       <p style={{ fontSize: 14, color: '#71717a', marginBottom: 32 }}>Effective Date: May 5, 2025 | Last Updated: May 2026</p>
 
       <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 32 }}>
@@ -95,6 +96,6 @@ export default function TermsPage() {
       <div style={{ marginTop: 48, paddingTop: 24, borderTop: '1px solid #e4e4e7', fontSize: 13, color: '#71717a', textAlign: 'center' }}>
         © {new Date().getFullYear()} MatchMyInterview. All rights reserved.
       </div>
-    </main>
+    </LegalShell>
   )
 }

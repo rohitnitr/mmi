@@ -1,92 +1,110 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
+import LegalShell from '@/components/marketing/LegalShell'
 
 export const metadata: Metadata = {
-  title: 'About Us – MatchMyInterview | Peer Mock Interview Platform',
+  title: 'About Us',
   description:
-    'MatchMyInterview is a peer-to-peer mock interview platform where you practice with real people using a coffee credit system. Learn how it works.',
-  keywords: 'mock interview, peer interview practice, coffee credits, interview preparation, MatchMyInterview',
+    'MatchMyInterview lets you practise interviews with real peers for free, and take JEE Main mock tests with a full analysis. Built by Rohit Poddar, an NIT Rourkela graduate.',
+  keywords: 'about MatchMyInterview, peer mock interview, JEE Main mock test, Rohit Poddar, NIT Rourkela',
   openGraph: {
-    title: 'About MatchMyInterview – Real Practice with Real People',
-    description:
-      'A peer-to-peer mock interview platform that connects you with like-minded peers through a simple coffee credit system.',
+    title: 'About MatchMyInterview',
+    description: 'Free peer-to-peer mock interviews and JEE Main mock tests, built by an NIT Rourkela graduate.',
     type: 'website',
   },
+  alternates: { canonical: '/about' },
 }
+
+const H2 = { fontSize: 20, fontWeight: 700, marginBottom: 12 } as const
+const P = { fontSize: 15, color: '#3f3f46', marginBottom: 12, lineHeight: 1.7 } as const
+const UL = { fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8, lineHeight: 1.7 } as const
+const SEC = { marginBottom: 32 } as const
+const EMAIL = 'matchmyinterview@gmail.com'
 
 export default function AboutPage() {
   return (
-    <main style={{ maxWidth: 760, margin: '0 auto', padding: '48px 20px 80px', fontFamily: 'Inter,system-ui,sans-serif', color: '#18181b', lineHeight: 1.75 }}>
-      <a href="/" style={{ fontSize: 13, color: '#71717a', textDecoration: 'none' }}>← Back to MatchMyInterview</a>
+    <LegalShell title="About">
+      <h1>About MatchMyInterview</h1>
+      <p style={{ fontSize: 14, color: '#71717a', marginBottom: 32 }}>Practice interviews with real peers. Practise JEE Main with real mock tests.</p>
 
-      <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: 24, marginBottom: 8 }}>About MatchMyInterview</h1>
-      <p style={{ fontSize: 14, color: '#71717a', marginBottom: 32 }}>Peer-to-Peer Mock Interview Platform</p>
-
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Welcome to MatchMyInterview</h2>
-        <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 16 }}>
-          MatchMyInterview is a <strong>peer-to-peer mock interview platform</strong> designed to help individuals practice and improve their interview skills in a realistic and collaborative environment.
+      <section style={SEC}>
+        <h2 style={H2}>What we do</h2>
+        <p style={P}>
+          MatchMyInterview is a practice platform with two parts. The first is a <strong>peer-to-peer mock interview community</strong>,
+          where people practise interviews with each other and give honest feedback. The second is a set of
+          <strong> JEE Main mock tests</strong> that give students a realistic exam screen, a score, a rank and a detailed review of
+          where they gained and lost marks.
         </p>
-        <p style={{ fontSize: 15, color: '#3f3f46' }}>
-          We believe that the best way to prepare for interviews is by practicing with real people who are on the same journey as you. Our platform connects users with like-minded peers so they can conduct mock interviews, share feedback, and build confidence together.
+        <p style={P}>
+          We started with interviews because the best way to prepare is to practise with real people who are on the same journey.
+          We added JEE mock tests because the same idea applies: you improve fastest when you practise under real conditions and then learn exactly what to fix.
         </p>
       </section>
 
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>💡 How It Works</h2>
-        <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <li>Users can invite peers for a mock interview session.</li>
-          <li>To send an invite, users offer a virtual <strong>"coffee"</strong> to their peer.</li>
-          <li>Once the peer accepts the invite, both users are connected and can begin practicing.</li>
-          <li>The goal is simple: <em>real practice with real people.</em></li>
+      <section style={SEC}>
+        <h2 style={H2}>Peer mock interviews</h2>
+        <ul style={UL}>
+          <li>Create a profile with your domain, role and experience.</li>
+          <li>Browse peers and send a connection request. <strong>Finding and connecting with peers is free.</strong></li>
+          <li>Once a peer accepts, you connect and practise a mock interview together.</li>
+          <li>Share feedback after the session and keep a profile that records your practice.</li>
         </ul>
+        <p style={{ ...P, marginTop: 12 }}>It suits fresh graduates, students preparing for campus placements, professionals changing roles, and anyone returning to work after a break.</p>
       </section>
 
-      <section style={{ marginBottom: 32, background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 14, padding: '20px 24px' }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>☕ Coffee Credit System</h2>
-        <ul style={{ fontSize: 15, color: '#92400e', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <li>Users can purchase coffee credits (e.g., <strong>5 coffees for ₹99</strong>).</li>
-          <li>Sending an invite requires <strong>1 coffee credit</strong>.</li>
-          <li>If the invited peer <strong>accepts within 24 hours</strong> → the session is confirmed and the coffee is consumed.</li>
-          <li>If the peer <strong>does not accept</strong> → the coffee is automatically refunded to your account.</li>
+      <section style={SEC}>
+        <h2 style={H2}>JEE Main mock tests</h2>
+        <ul style={UL}>
+          <li>Full-length papers in the JEE Main pattern: 75 questions across Physics, Chemistry and Mathematics, with the standard marking scheme.</li>
+          <li>A timed exam screen with a question palette, section tabs, mark-for-review and an on-screen number keypad, on phone and desktop.</li>
+          <li>Pay per mock: <strong>₹11</strong> for the mock, or <strong>₹49</strong> for the mock with a full analysis. There is no subscription.</li>
+          <li>Your score, rank and percentile appear straight after you submit.</li>
         </ul>
-        <p style={{ fontSize: 13, color: '#92400e', marginTop: 12 }}>New users receive 1 free coffee on sign-up — no card required.</p>
-      </section>
-
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>🎯 Our Mission</h2>
-        <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 12 }}>
-          To create a trusted space where individuals can:
+        <p style={{ ...P, marginTop: 12 }}>
+          Explore the tests on the <a href="/jee" style={{ color: '#18181b' }}>JEE mock test page</a>. We are an independent practice platform.
+          We are not affiliated with, or endorsed by, the National Testing Agency (NTA).
         </p>
-        <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <li>Practice interviews with real peers</li>
-          <li>Improve communication and confidence</li>
-          <li>Prepare effectively for real-world opportunities</li>
-        </ul>
       </section>
 
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Who We Help</h2>
-        <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <li>Fresh graduates entering the job market for the first time</li>
-          <li>Experienced professionals switching industries or roles</li>
-          <li>Students targeting internships and campus placements</li>
-          <li>Job seekers returning to work after a career break</li>
-          <li>Anyone who wants to build confidence before a real interview</li>
-        </ul>
+      <section style={SEC}>
+        <h2 style={H2}>How we create content</h2>
+        <p style={P}>
+          Our blog guides and test papers are prepared by our own team. We check facts and answer keys before anything is published, and we correct mistakes
+          when readers report them. If you spot an error in an article or a test question, write to us at{' '}
+          <a href={`mailto:${EMAIL}`} style={{ color: '#18181b' }}>{EMAIL}</a> and we will review it.
+        </p>
       </section>
 
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Get in Touch</h2>
-        <p style={{ fontSize: 15, color: '#3f3f46' }}>
-          We would love to hear from you — whether you have a question, feedback, or a partnership inquiry.<br /><br />
-          📧 Email: <a href="mailto:support@matchmyinterview.com" style={{ color: '#18181b' }}>support@matchmyinterview.com</a><br />
-          🌐 Website: <a href="https://www.matchmyinterview.com" style={{ color: '#18181b' }}>https://www.matchmyinterview.com</a>
+      <section style={SEC}>
+        <h2 style={H2}>Who runs MatchMyInterview</h2>
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+          <Image src="/founder.jpg" alt="Rohit Poddar, founder of MatchMyInterview" width={112} height={112} style={{ borderRadius: 20, objectFit: 'cover' }} />
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <p style={{ ...P, marginBottom: 6 }}>
+              <strong>Rohit Poddar</strong>, founder. An NIT Rourkela graduate who builds practice tools for interviews and for JEE aspirants.
+              MatchMyInterview is operated from India as an independent product, not affiliated with Google, LinkedIn or any employer shown on member profiles.
+            </p>
+            <p style={{ ...P, marginBottom: 0 }}>
+              <a href="https://github.com/rohitnitr" target="_blank" rel="noopener noreferrer" style={{ color: '#18181b' }}>GitHub</a>
+              {' · '}
+              <a href="https://www.linkedin.com/in/rohitnitr/" target="_blank" rel="noopener noreferrer" style={{ color: '#18181b' }}>LinkedIn</a>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section style={SEC}>
+        <h2 style={H2}>Get in touch</h2>
+        <p style={P}>
+          Questions, feedback or partnership ideas? Email <a href={`mailto:${EMAIL}`} style={{ color: '#18181b' }}>{EMAIL}</a> or use our{' '}
+          <a href="/contact" style={{ color: '#18181b' }}>contact page</a>. Website:{' '}
+          <a href="https://www.matchmyinterview.com" style={{ color: '#18181b' }}>https://www.matchmyinterview.com</a>
         </p>
       </section>
 
       <div style={{ marginTop: 48, paddingTop: 24, borderTop: '1px solid #e4e4e7', fontSize: 13, color: '#71717a', textAlign: 'center' }}>
         © {new Date().getFullYear()} MatchMyInterview. All rights reserved.
       </div>
-    </main>
+    </LegalShell>
   )
 }

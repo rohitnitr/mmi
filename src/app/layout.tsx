@@ -1,19 +1,21 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { CookieConsent } from '@/components/CookieConsent'
 import { GoogleAnalytics } from '@/components/GoogleAnalytics'
+import { JsonLd } from '@/components/JsonLd'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://matchmyinterview.com'),
+  metadataBase: new URL('https://www.matchmyinterview.com'),
   title: {
-    default: 'MatchMyInterview — The Peer-Validated Professional Portfolio',
+    default: 'MatchMyInterview — Peer Mock Interviews & JEE Mock Tests',
     template: '%s | MatchMyInterview'
   },
-  description: 'Practice with real people. Get interviewed. Receive peer feedback. Build a professional portfolio backed by real interview evidence.',
-  keywords: ['mock interview', 'interview practice', 'peer interview', 'skill validation', 'interview portfolio', 'software engineering interview', 'data analyst interview', 'free mock interviews'],
-  authors: [{ name: 'MatchMyInterview Team' }],
+  description: 'Practice interviews with real peers for free, and take JEE Main mock tests from ₹11. Get honest feedback, track your progress and build a profile backed by real practice.',
+  keywords: ['mock interview', 'interview practice', 'peer interview', 'skill validation', 'interview portfolio', 'software engineering interview', 'data analyst interview', 'free mock interviews', 'JEE Main mock test', 'JEE mock test online'],
+  authors: [{ name: 'Rohit Poddar', url: 'https://www.matchmyinterview.com/about' }],
   creator: 'MatchMyInterview',
   publisher: 'MatchMyInterview',
   formatDetection: {
@@ -22,9 +24,9 @@ export const metadata: Metadata = {
     telephone: false,
   },
   openGraph: {
-    title: 'MatchMyInterview — Practice Mock Interviews with Real Peers',
-    description: 'A 100% free, peer-to-peer mock interview platform. Connect with real people, practice live, and land your dream job faster.',
-    url: 'https://matchmyinterview.com',
+    title: 'MatchMyInterview — Practice Interviews with Real Peers, Take JEE Mock Tests',
+    description: 'Free peer-to-peer mock interviews, and JEE Main mock tests with a full analysis from ₹11. No subscription.',
+    url: 'https://www.matchmyinterview.com',
     siteName: 'MatchMyInterview',
     images: [
       {
@@ -39,8 +41,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MatchMyInterview — Practice Mock Interviews with Real Peers',
-    description: 'A 100% free, peer-to-peer mock interview platform. Connect with real people, practice live, and land your dream job faster.',
+    title: 'MatchMyInterview — Practice Interviews with Real Peers, Take JEE Mock Tests',
+    description: 'Free peer-to-peer mock interviews, and JEE Main mock tests with a full analysis from ₹11. No subscription.',
     images: ['/og-image.jpg'],
   },
   alternates: {
@@ -59,6 +61,9 @@ export const metadata: Metadata = {
   },
 }
 
+// When Google gives you a publisher ID, add it to metadata as:
+//   other: { 'google-adsense-account': 'ca-pub-XXXXXXXXXXXXXXXX' },
+// and put the AdSense script only on public content pages (never the exam, store, dashboard or login).
 export default function RootLayout({
   children,
 }: {
@@ -67,8 +72,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body>
+        <JsonLd />
         <GoogleAnalytics />
         {children}
+        <CookieConsent />
       </body>
     </html>
   )

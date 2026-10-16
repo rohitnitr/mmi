@@ -1,90 +1,66 @@
 import type { Metadata } from 'next'
+import LegalShell from '@/components/marketing/LegalShell'
 
 export const metadata: Metadata = {
-  title: 'Refund Policy – MatchMyInterview',
-  description: 'MatchMyInterview refund policy for coffee credits. Learn when credits are auto-refunded and when purchases are non-refundable.',
-  keywords: 'MatchMyInterview refund, coffee credit refund, mock interview refund policy',
+  title: 'Refund and Cancellation Policy',
+  description: 'When MatchMyInterview refunds a JEE mock test purchase, and how to ask. Finding and connecting with peers is free.',
+  alternates: { canonical: '/refund' },
 }
+
+const H2 = { fontSize: 20, fontWeight: 700, marginBottom: 12 } as const
+const P = { fontSize: 15, color: '#3f3f46', marginBottom: 12, lineHeight: 1.7 } as const
+const UL = { fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8, lineHeight: 1.7 } as const
+const SEC = { marginBottom: 32 } as const
+const EMAIL = 'matchmyinterview@gmail.com'
 
 export default function RefundPage() {
   return (
-    <main style={{ maxWidth: 760, margin: '0 auto', padding: '48px 20px 80px', fontFamily: 'Inter,system-ui,sans-serif', color: '#18181b', lineHeight: 1.75 }}>
-      <a href="/" style={{ fontSize: 13, color: '#71717a', textDecoration: 'none' }}>← Back to MatchMyInterview</a>
-      <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: 24, marginBottom: 8 }}>Refund Policy</h1>
-      <p style={{ fontSize: 14, color: '#71717a', marginBottom: 32 }}>Effective Date: May 5, 2025 | Last Updated: May 2026</p>
+    <LegalShell title="Refund Policy">
+      <h1>Refund and Cancellation Policy</h1>
+      <p style={{ fontSize: 14, color: '#71717a', marginBottom: 32 }}>Last updated: October 2026</p>
 
-      <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 32 }}>
-        At MatchMyInterview, our coffee credit system is designed to be fair and transparent. This policy explains when credits are automatically refunded and when purchases are non-refundable.
-      </p>
-
-      <section style={{ marginBottom: 32, background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 14, padding: '20px 24px' }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>☕ Coffee Credit Refunds</h2>
-        <ul style={{ fontSize: 15, color: '#92400e', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <li>
-            <strong>Auto-refund (invite not accepted):</strong> If a peer does not accept your coffee invite within <strong>24 hours</strong>, the coffee credit is automatically refunded to your account. No action needed on your part.
-          </li>
-          <li>
-            <strong>Non-refundable (invite accepted):</strong> If the peer accepts your invite and a mock interview session begins, the coffee credit is considered consumed and is non-refundable.
-          </li>
-        </ul>
-      </section>
-
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Purchase Refunds</h2>
-        <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-          <li>All purchases of coffee credit packs are <strong>non-refundable once completed</strong>.</li>
-          <li>Refunds will <strong>not</strong> be issued for unused credits remaining in your account.</li>
-          <li>In exceptional circumstances (e.g., duplicate charges, billing errors), please contact us within 14 days of the transaction.</li>
-        </ul>
-      </section>
-
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Exceptional Circumstances</h2>
-        <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 10 }}>We will review refund requests on a case-by-case basis for:</p>
-        <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-          <li>A verified technical failure on our platform that prevented a session</li>
-          <li>Duplicate charges or billing errors</li>
-          <li>Accidental purchases made in error</li>
-        </ul>
-        <p style={{ fontSize: 15, color: '#3f3f46' }}>
-          For such cases, contact us at <a href="mailto:support@matchmyinterview.com" style={{ color: '#18181b' }}>support@matchmyinterview.com</a> within 14 days with your registered email and transaction details.
+      <section style={SEC}>
+        <h2 style={H2}>What you pay for</h2>
+        <p style={P}>
+          Finding and connecting with peers on MatchMyInterview is free. Payments apply only to <strong>JEE mock tests</strong>, which are digital products.
+          You pay per mock: the mock test, or the mock test with full analysis. One purchase gives you one sitting of that mock. There is no subscription and nothing renews.
         </p>
       </section>
 
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>How to Request a Refund</h2>
-        <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 10 }}>
-          Email us at <a href="mailto:support@matchmyinterview.com" style={{ color: '#18181b' }}>support@matchmyinterview.com</a> with:
-        </p>
-        <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-          <li>Your registered email address</li>
-          <li>Date and amount of the purchase</li>
-          <li>Reason for your refund request</li>
-          <li>Any supporting screenshots or details</li>
+      <section style={SEC}>
+        <h2 style={H2}>When we refund</h2>
+        <ul style={UL}>
+          <li><strong>Charged but not unlocked.</strong> You were charged and the mock did not unlock. We first try to fix the access. If we cannot, we refund in full.</li>
+          <li><strong>Charged twice.</strong> A duplicate payment for the same item is refunded in full.</li>
+          <li><strong>A fault on our side.</strong> If a technical fault on our platform stopped you from completing the test and getting your result, we will offer a free new sitting or a refund, whichever you prefer.</li>
         </ul>
-        <p style={{ fontSize: 15, color: '#3f3f46' }}>
-          We will review and respond within 5 business days. Approved refunds will be credited to your original payment method within 7–10 business days.
-        </p>
       </section>
 
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Changes to This Policy</h2>
-        <p style={{ fontSize: 15, color: '#3f3f46' }}>
-          We reserve the right to update this Refund Policy at any time. Changes will be posted on this page with a revised effective date.
-        </p>
+      <section style={SEC}>
+        <h2 style={H2}>When a refund is not available</h2>
+        <ul style={UL}>
+          <li>Once you have started a test and it ran normally, because the digital content has been delivered.</li>
+          <li>If you change your mind, or your score is lower than you hoped.</li>
+          <li>Where a question or answer key was wrong. In that case we correct it and re-score your result instead.</li>
+        </ul>
       </section>
 
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Contact Us</h2>
-        <p style={{ fontSize: 15, color: '#3f3f46' }}>
-          📧 Email: <a href="mailto:support@matchmyinterview.com" style={{ color: '#18181b' }}>support@matchmyinterview.com</a><br />
-          🌐 Website: <a href="https://www.matchmyinterview.com" style={{ color: '#18181b' }}>https://www.matchmyinterview.com</a>
+      <section style={SEC}>
+        <h2 style={H2}>Cancellation</h2>
+        <p style={P}>Because access is delivered immediately, a purchase cannot be cancelled once it is paid, except in the cases listed above. Nothing renews automatically, so there is nothing to cancel later.</p>
+      </section>
+
+      <section style={SEC}>
+        <h2 style={H2}>How to ask for a refund</h2>
+        <p style={P}>
+          Email <a href={`mailto:${EMAIL}`} style={{ color: '#18181b' }}>{EMAIL}</a> with your registered email address, the name of the mock, the payment ID and the date of payment.
+          We reply within 1 to 2 business days. Approved refunds go back to the original payment method and usually reach you within 5 to 7 business days, depending on your bank.
         </p>
       </section>
 
       <div style={{ marginTop: 48, paddingTop: 24, borderTop: '1px solid #e4e4e7', fontSize: 13, color: '#71717a', textAlign: 'center' }}>
         © {new Date().getFullYear()} MatchMyInterview. All rights reserved.
       </div>
-    </main>
+    </LegalShell>
   )
 }

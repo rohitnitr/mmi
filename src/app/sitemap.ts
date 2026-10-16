@@ -22,5 +22,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/terms`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.5 },
     { url: `${base}/refund`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.5 },
     { url: `${base}/cookies`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.4 },
+    { url: `${base}/disclaimer`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.4 },
+    { url: `${base}/guides`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${base}/guides/mock-interview-practice`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/guides/peer-feedback`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/guides/interview-portfolio`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/guides/first-peer-session`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/search`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.5 },
+    { url: `${base}/sitemap`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${base}/talent`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.6 },
   ]
 }

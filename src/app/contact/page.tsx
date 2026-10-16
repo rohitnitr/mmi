@@ -1,78 +1,89 @@
 import type { Metadata } from 'next'
+import LegalShell from '@/components/marketing/LegalShell'
+import ContactForm from '@/components/ContactForm'
 
 export const metadata: Metadata = {
-  title: 'Contact Us – MatchMyInterview',
+  title: 'Contact Us',
   description:
-    'Get in touch with MatchMyInterview. For support, feedback, or billing queries, email us at support@matchmyinterview.com. We respond within 24–48 hours.',
-  keywords: 'MatchMyInterview contact, support, feedback, mock interview help',
+    'Contact MatchMyInterview for help with peer mock interviews, JEE mock tests, payments or feedback. Email matchmyinterview@gmail.com. We reply within 1 to 2 business days.',
+  keywords: 'MatchMyInterview contact, support, JEE mock test help, feedback',
   openGraph: {
     title: 'Contact MatchMyInterview',
-    description: 'Reach out to our support team. We respond within 24–48 hours.',
+    description: 'Reach the MatchMyInterview team. We reply within 1 to 2 business days.',
     type: 'website',
   },
+  alternates: { canonical: '/contact' },
 }
+
+const H2 = { fontSize: 20, fontWeight: 700, marginBottom: 12 } as const
+const H3 = { fontSize: 16, fontWeight: 600, marginTop: 16, marginBottom: 4 } as const
+const P = { fontSize: 15, color: '#3f3f46', marginBottom: 16, lineHeight: 1.7 } as const
+const EMAIL = 'matchmyinterview@gmail.com'
 
 export default function ContactPage() {
   return (
-    <main style={{ maxWidth: 760, margin: '0 auto', padding: '48px 20px 80px', fontFamily: 'Inter,system-ui,sans-serif', color: '#18181b', lineHeight: 1.75 }}>
-      <a href="/" style={{ fontSize: 13, color: '#71717a', textDecoration: 'none' }}>← Back to MatchMyInterview</a>
+    <LegalShell title="Contact">
+      <h1>Contact Us</h1>
+      <p style={{ fontSize: 14, color: '#71717a', marginBottom: 32 }}>
+        We are here to help. Write to us at <a href={`mailto:${EMAIL}`} style={{ color: '#18181b' }}>{EMAIL}</a>
+      </p>
 
-      <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: 24, marginBottom: 8 }}>Contact Us</h1>
-      <p style={{ fontSize: 14, color: '#71717a', marginBottom: 32 }}>We're here to help — reach us at <a href="mailto:support@matchmyinterview.com" style={{ color: '#18181b' }}>support@matchmyinterview.com</a></p>
+      <ContactForm />
 
-      <section style={{ marginBottom: 32, background: '#f4f4f5', borderRadius: 14, padding: '20px 24px' }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>📧 Email Support</h2>
+      <section style={{ marginBottom: 32, background: '#f4f4f5', borderRadius: 14, padding: '20px 24px', marginTop: 32 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>Email</h2>
         <p style={{ fontSize: 15, color: '#3f3f46' }}>
-          The primary way to reach us is via email:<br /><br />
-          <a href="mailto:support@matchmyinterview.com" style={{ color: '#18181b', fontWeight: 700, fontSize: 16 }}>support@matchmyinterview.com</a>
+          The quickest way to reach us is by email:<br /><br />
+          <a href={`mailto:${EMAIL}`} style={{ color: '#18181b', fontWeight: 700, fontSize: 16 }}>{EMAIL}</a>
         </p>
-        <p style={{ fontSize: 13, color: '#71717a', marginTop: 10 }}>
-          We aim to respond to all queries within <strong>24–48 hours</strong>.
-        </p>
+        <p style={{ fontSize: 13, color: '#71717a', marginTop: 10 }}>We reply to every message within <strong>1 to 2 business days</strong>.</p>
       </section>
 
       <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>What Can We Help You With?</h2>
+        <h2 style={H2}>What can we help you with?</h2>
 
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 16, marginBottom: 4 }}>General Inquiries</h3>
-        <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 16 }}>
-          Questions about how MatchMyInterview works, the coffee credit system, or getting started? Email us and we'll help you out.
+        <h3 style={H3}>Peer mock interviews</h3>
+        <p style={P}>Trouble finding peers, sending a connection request, or joining a session? Tell us what happened and the email you signed up with.</p>
+
+        <h3 style={H3}>JEE mock tests</h3>
+        <p style={P}>
+          A question that looks wrong, a test that would not load, or a score that does not add up? Send the name of the mock and the question number.
+          If we find a mistake in a question or an answer key, we correct it and re-score affected results.
         </p>
 
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 16, marginBottom: 4 }}>Technical Support</h3>
-        <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 16 }}>
-          Experiencing a bug, login issue, or a problem with your mock interview session? Write to us with a brief description of the issue and your registered email address. We aim to resolve technical issues within 24–48 hours.
+        <h3 style={H3}>Payments and refunds</h3>
+        <p style={P}>
+          If you were charged but your mock did not unlock, include your registered email, the payment ID and the time of payment.
+          See our <a href="/refund" style={{ color: '#18181b' }}>Refund Policy</a> for details.
         </p>
 
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 16, marginBottom: 4 }}>Coffee Credits &amp; Billing</h3>
-        <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 16 }}>
-          For questions about coffee credit purchases, refunds, or billing, please email us with your registered email and transaction details. See our <a href="/refund" style={{ color: '#18181b' }}>Refund Policy</a> for full details.
-        </p>
+        <h3 style={H3}>Technical support</h3>
+        <p style={P}>Login problems or bugs: describe the issue, your device and browser, and attach a screenshot if you can.</p>
 
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 16, marginBottom: 4 }}>Feedback &amp; Suggestions</h3>
-        <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 16 }}>
-          Your feedback makes MatchMyInterview better. If you have a feature request or want to share your experience, we genuinely want to hear from you.
-        </p>
+        <h3 style={H3}>Feedback and suggestions</h3>
+        <p style={P}>Your feedback shapes what we build next. We read every message.</p>
 
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 16, marginBottom: 4 }}>Partnership &amp; Business Inquiries</h3>
-        <p style={{ fontSize: 15, color: '#3f3f46', marginBottom: 16 }}>
-          If you are a business, university, coaching institute, or HR platform looking to partner with MatchMyInterview, reach out with the subject line <em>"Partnership Inquiry."</em>
-        </p>
+        <h3 style={H3}>Partnerships</h3>
+        <p style={P}>Coaching institutes, colleges and educators are welcome to write with the subject line <em>Partnership enquiry</em>.</p>
       </section>
 
       <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Response Times</h2>
-        <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <li><strong>General inquiries:</strong> Within 1–2 business days</li>
-          <li><strong>Technical support:</strong> Within 24–48 hours</li>
-          <li><strong>Billing &amp; credit queries:</strong> Within 1–2 business days</li>
-          <li><strong>Partnership inquiries:</strong> Within 3–5 business days</li>
+        <h2 style={H2}>Response times</h2>
+        <ul style={{ fontSize: 15, color: '#3f3f46', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8, lineHeight: 1.7 }}>
+          <li><strong>General and technical questions:</strong> within 1 to 2 business days</li>
+          <li><strong>Payment problems:</strong> within 1 to 2 business days</li>
+          <li><strong>Partnership enquiries:</strong> within 3 to 5 business days</li>
         </ul>
+      </section>
+
+      <section style={{ marginBottom: 32 }}>
+        <h2 style={H2}>Grievance contact</h2>
+        <p style={P}>For privacy or data requests, contact Rohit Poddar, founder, at <a href={`mailto:${EMAIL}`} style={{ color: '#18181b' }}>{EMAIL}</a>. See our <a href="/privacy" style={{ color: '#18181b' }}>Privacy Policy</a>.</p>
       </section>
 
       <div style={{ marginTop: 48, paddingTop: 24, borderTop: '1px solid #e4e4e7', fontSize: 13, color: '#71717a', textAlign: 'center' }}>
         © {new Date().getFullYear()} MatchMyInterview. All rights reserved.
       </div>
-    </main>
+    </LegalShell>
   )
 }

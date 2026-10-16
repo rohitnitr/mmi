@@ -2,12 +2,13 @@
 
 import Script from 'next/script'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useEffect, Suspense } from 'react'
+import { useEffect, useState, Suspense } from 'react'
+import { COOKIE_KEY } from '@/components/CookieConsent'
 
 declare global {
   interface Window {
-    gtag: (...args: any[]) => void;
-    dataLayer: Record<string, any>[];
+    gtag: (...args: unknown[]) => void
+    dataLayer: Record<string, unknown>[]
   }
 }
 
@@ -20,10 +21,7 @@ function AnalyticsEvents({ measurementId }: { measurementId: string }) {
       const url =
         pathname +
         (searchParams && searchParams.toString() ? `?${searchParams.toString()}` : '')
-        
-      window.gtag('config', measurementId, {
-        page_path: url,
-      })
+      window.gtag('config', measurementId, { page_path: url })
     }
   }, [pathname, searchParams, measurementId])
 
@@ -32,10 +30,18 @@ function AnalyticsEvents({ measurementId }: { measurementId: string }) {
 
 export function GoogleAnalytics() {
   const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
+  const [allowed, setAllowed] = useState(false)
 
-  if (!GA_MEASUREMENT_ID) {
-    return null
-  }
+  useEffect(() => {
+    const sync = () => {
+      setAllowed(window.localStorage.getItem(COOKIE_KEY) === 'all')
+    }
+    sync()
+    window.addEventListener('mmi-consent-analytics', sync)
+    return () => window.removeEventListener('mmi-consent-analytics', sync)
+  }, [])
+
+  if (!GA_MEASUREMENT_ID || !allowed) return null
 
   return (
     <>

@@ -13,6 +13,9 @@ import { GlobalBlogFooter } from '@/components/blog/GlobalBlogFooter'
 
 export const revalidate = 60
 
+const SITE = 'https://www.matchmyinterview.com'
+const abs = (u: string) => (u.startsWith('http') ? u : SITE + (u.startsWith('/') ? u : '/' + u))
+
 export async function generateStaticParams() {
   return (await getPosts()).map(p => ({ slug: p.slug }))
 }
@@ -31,7 +34,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: post.title, description: post.excerpt, type: 'article',
       publishedTime: post.published_at || post.created_at,
       authors: [post.author],
-      url: `https://matchmyinterview.com/blog/${post.slug}`,
+      url: `${SITE}/blog/${post.slug}`,
       images: [{ url: img, width: 1200, height: 630 }],
     },
     twitter: { card: 'summary_large_image', title: post.title, description: post.excerpt, images: [img] },
@@ -51,8 +54,41 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
 
   const related = await getRelatedPosts(post.slug, post.category, post.tags)
 
+  const words = post.content.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length
+  const modified = (post as { updated_at?: string | null }).updated_at
+  const url = `${SITE}/blog/${post.slug}`
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BlogPosting',
+        headline: post.title,
+        description: post.excerpt,
+        image: [abs(post.cover_image || '/og-image.jpg')],
+        datePublished: post.published_at || post.created_at,
+        dateModified: modified || post.published_at || post.created_at,
+        author: { '@type': 'Person', name: post.author, url: `${SITE}/about` },
+        publisher: { '@type': 'Organization', name: 'MatchMyInterview', url: SITE },
+        mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+        keywords: post.tags.join(', '),
+        articleSection: post.category,
+        wordCount: words,
+        inLanguage: 'en',
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: SITE },
+          { '@type': 'ListItem', position: 2, name: 'Blog', item: `${SITE}/blog` },
+          { '@type': 'ListItem', position: 3, name: post.title, item: url },
+        ],
+      },
+    ],
+  }
+
   return (
     <div className="min-h-screen" style={{ background: '#F1F5F9', padding: 'min(8vw, 80px) min(4vw, 40px) 40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <ReadingProgress />
       <ViewCounter slug={post.slug} />
 
