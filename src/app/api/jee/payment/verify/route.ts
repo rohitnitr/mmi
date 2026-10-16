@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@/lib/jee/auth'
-import { hmacHex, markPaid, safeEqual } from '@/lib/jee/payments'
+import { hmacHex, safeEqual, settleOrder } from '@/lib/jee/pay'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -23,8 +23,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Payment could not be verified.' }, { status: 400 })
   }
   try {
-    const r = await markPaid(orderId, paymentId, user.id)
+    const r = await settleOrder(orderId, paymentId, user.id)
     if (r === 'missing') return NextResponse.json({ error: 'Order not found.' }, { status: 404 })
+    if (r === 'mismatch') return NextResponse.json({ error: 'This payment does not match the order. Contact support with your payment id.' }, { status: 409 })
+    if (r === 'not_captured') return NextResponse.json({ error: 'Your payment is still being processed. It will unlock automatically.' }, { status: 202 })
     return NextResponse.json({ ok: true, result: r })
   } catch (e) {
     console.error('[jee verify]', e)

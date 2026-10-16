@@ -202,7 +202,7 @@ export default function StoreClient({ states = [] }: { states: TestState[] }) {
   const renderCard = (item: CatalogMockItem, badgeColor = '#2563EB', sectionOpen = true) => {
     const s = getState(item)
     const id = s.test.id
-    const done = s.attempt === 'done'
+    const done = s.attempt === 'done' && !s.canStart
     const inProgress = s.attempt === 'in_progress'
     const isFree = Boolean(s.test.is_free)
     const cost = s.test.price_paise ? s.test.price_paise : PRICE_PAISE.mock
