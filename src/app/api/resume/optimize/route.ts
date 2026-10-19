@@ -51,6 +51,14 @@ interface ResumeData {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if API key is configured
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: 'OpenAI API key not configured. Please contact support.' },
+        { status: 500 }
+      )
+    }
+
     // Initialize OpenAI client inside the function to avoid build-time errors
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,

@@ -109,8 +109,15 @@ export default function ResumeBuilder() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to parse resume')
+        let errorMessage = 'Failed to parse resume'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+        } catch {
+          // If JSON parsing fails, use default error message
+          errorMessage = `Server error (${response.status}). Please try again.`
+        }
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
@@ -144,8 +151,15 @@ export default function ResumeBuilder() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to optimize resume')
+        let errorMessage = 'Failed to optimize resume'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+        } catch {
+          // If JSON parsing fails, use default error message
+          errorMessage = `Server error (${response.status}). Please try again.`
+        }
+        throw new Error(errorMessage)
       }
 
       const result = await response.json()
