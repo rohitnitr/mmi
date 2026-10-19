@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
-
 interface ResumeData {
   personalInfo: {
     fullName: string
@@ -55,6 +51,11 @@ interface ResumeData {
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize OpenAI client inside the function to avoid build-time errors
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+
     const body = await request.json()
     const { resumeData, jobDescription } = body as {
       resumeData: ResumeData

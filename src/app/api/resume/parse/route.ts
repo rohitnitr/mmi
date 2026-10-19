@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
-
 export async function POST(request: NextRequest) {
+  // Initialize OpenAI client inside the function to avoid build-time errors
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  })
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
